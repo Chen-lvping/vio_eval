@@ -1,0 +1,24 @@
+# Python byte-compiled / cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Generated output directories
+graphify-out/
+
+# Large data directories — not tracked in git (tracked separately or on NAS)
+data/archive/
+data/evaluation/
+data/gripper_data/
+data/gripper_data_1/
+data/ground_truth/
+data/calibration/static_pose_samples_*/
+data/calibration/image_*/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

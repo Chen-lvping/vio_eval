@@ -1,0 +1,587 @@
+calibration_type: eye_in_hand
+method: tsai
+target:
+  target_type: aprilgrid
+  tag_family: tag36h11
+  tagRows: 6
+  tagCols: 6
+  tagSize: 0.055
+  tagSpacing: 0.3
+  physical_spacing_m: 0.0165
+  start_id: 0
+  end_id: 35
+inputs:
+  pose_summary: /home/chenlvping/Auto_calibration/ARM_trajectory/data/static_pose_samples_0615/static_pose_summary.json
+  image_dir: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615
+  camera_file: /home/chenlvping/Auto_calibration/ARM_trajectory/data/camera_cam0_640x400_intrinsics.yaml
+  camera_name: cam0
+  robot_pose_direction: base_to_gripper
+  robot_orientation_source: raw_rpy
+camera:
+  camera_model: pinhole
+  distortion_model: equidistant
+  intrinsics:
+  - - 229.521942
+    - 0.0
+    - 331.820404
+  - - 0.0
+    - 229.498383
+    - 177.479172
+  - - 0.0
+    - 0.0
+    - 1.0
+  distortion_coeffs:
+  - 0.0532720573
+  - 0.0263620131
+  - -0.0149727063
+  - 0.00209389348
+  yaml_resolution:
+  - 640
+  - 400
+  image_size:
+  - 640
+  - 400
+  crop_y: 0.0
+  intrinsics_scale:
+  - 1.0
+  - 1.0
+result:
+  T_cam_to_gripper:
+  - - 0.8546727377583336
+    - -0.4226893164917721
+    - 0.30144361505328515
+    - 0.020087822908267137
+  - - 0.5191665408532473
+    - 0.6949700011671338
+    - -0.49747643194047625
+    - -0.09733361730500567
+  - - 0.0007837034822788524
+    - 0.5816789829463261
+    - 0.8134180638560835
+    - 0.05230045779946749
+  - - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+  T_gripper_to_cam:
+  - - 0.8546727377583336
+    - 0.5191665408532473
+    - 0.0007837034822788524
+    - 0.0333228547534581
+  - - -0.4226893164917721
+    - 0.6949700011671338
+    - 0.5816789829463261
+    - 0.045712775166542846
+  - - 0.30144361505328515
+    - -0.49747643194047625
+    - 0.8134180638560835
+    - -0.0970186637228019
+  - - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+  translation_cam_to_gripper_m:
+  - 0.020087822908267137
+  - -0.09733361730500567
+  - 0.05230045779946749
+  quaternion_cam_to_gripper_xyzw:
+  - 0.29422978806330785
+  - 0.08197438556146185
+  - 0.2567953099895985
+  - 0.9169324951682036
+diagnostics:
+  used_sample_count: 15
+  skipped_sample_count: 25
+  tag_count_mean: 7.266666666666667
+  tag_count_min: 6
+  tag_count_max: 10
+  mean_reprojection_error_px: 0.831268817045388
+  max_reprojection_error_px: 1.8533425168119562
+  board_consistency:
+    mean_T_base_grid:
+    - - 0.9984603372150517
+      - -0.005272438191654825
+      - 0.05521916699770435
+      - -0.20454077237558688
+    - - 0.055381879786853216
+      - 0.03856522494907611
+      - -0.9977201866334576
+      - 0.6558339554333034
+    - - 0.0031308784198241513
+      - 0.9992421752609034
+      - 0.0387978450455427
+      - -0.527326472171303
+    - - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+    translation_std_m_xyz:
+    - 0.0025757271662437656
+    - 0.0014812292887928147
+    - 0.003589435934242599
+    translation_error_mean_m: 0.004422271395902295
+    translation_error_max_m: 0.007107963017242985
+    rotation_error_mean_deg: 0.489758582759268
+    rotation_error_max_deg: 1.1706134842279925
+    per_sample:
+    - sample_id: 4
+      translation_error_m: 0.0068254587648117915
+      rotation_error_deg: 1.1706134842279925
+    - sample_id: 5
+      translation_error_m: 0.007107963017242985
+      rotation_error_deg: 0.5442922214635207
+    - sample_id: 8
+      translation_error_m: 0.00397852517014945
+      rotation_error_deg: 0.501199919990662
+    - sample_id: 13
+      translation_error_m: 0.002658026673674723
+      rotation_error_deg: 0.13377683977712718
+    - sample_id: 14
+      translation_error_m: 0.004144836367999911
+      rotation_error_deg: 0.3592122659377477
+    - sample_id: 15
+      translation_error_m: 0.00432524458572567
+      rotation_error_deg: 0.5756245628402364
+    - sample_id: 20
+      translation_error_m: 0.0028200886424893296
+      rotation_error_deg: 0.38348592755016087
+    - sample_id: 21
+      translation_error_m: 0.0036113804580627856
+      rotation_error_deg: 0.442737610095743
+    - sample_id: 22
+      translation_error_m: 0.0037371274502006635
+      rotation_error_deg: 0.6761993296967359
+    - sample_id: 23
+      translation_error_m: 0.0023497878953462428
+      rotation_error_deg: 0.36348924534521415
+    - sample_id: 24
+      translation_error_m: 0.004251344088443825
+      rotation_error_deg: 0.2968452568010316
+    - sample_id: 29
+      translation_error_m: 0.005611408970836132
+      rotation_error_deg: 0.44869919342785836
+    - sample_id: 30
+      translation_error_m: 0.003308676842056256
+      rotation_error_deg: 0.3989551276774563
+    - sample_id: 31
+      translation_error_m: 0.006660933360827833
+      rotation_error_deg: 0.732513308271818
+    - sample_id: 35
+      translation_error_m: 0.004943268650666833
+      rotation_error_deg: 0.31873444828571623
+  samples:
+  - sample_id: 4
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/4.png
+    tag_count: 7
+    tag_ids:
+    - 1
+    - 2
+    - 7
+    - 12
+    - 13
+    - 16
+    - 17
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 2
+      raw:eq_unsharp@4: 3
+      undistort_balance_0.00:equalize@4: 2
+      undistort_balance_0.00:eq_unsharp@4: 7
+    mean_reprojection_error_px: 0.9359796085667433
+    max_reprojection_error_px: 1.6710009059863529
+  - sample_id: 5
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/5.png
+    tag_count: 7
+    tag_ids:
+    - 6
+    - 7
+    - 8
+    - 12
+    - 13
+    - 14
+    - 35
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 1
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 3
+      undistort_balance_0.00:eq_unsharp@4: 7
+    mean_reprojection_error_px: 0.7754037341964359
+    max_reprojection_error_px: 1.6643471683823474
+  - sample_id: 8
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/8.png
+    tag_count: 6
+    tag_ids:
+    - 0
+    - 1
+    - 4
+    - 6
+    - 10
+    - 34
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 0
+      undistort_balance_0.00:equalize@4: 3
+      undistort_balance_0.00:eq_unsharp@4: 6
+    mean_reprojection_error_px: 0.8668857572828955
+    max_reprojection_error_px: 1.4575849112638903
+  - sample_id: 13
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/13.png
+    tag_count: 6
+    tag_ids:
+    - 4
+    - 7
+    - 8
+    - 12
+    - 15
+    - 17
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 3
+      raw:eq_unsharp@4: 5
+      undistort_balance_0.00:equalize@4: 5
+      undistort_balance_0.00:eq_unsharp@4: 6
+    mean_reprojection_error_px: 0.9408418416307976
+    max_reprojection_error_px: 1.7876819664829653
+  - sample_id: 14
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/14.png
+    tag_count: 7
+    tag_ids:
+    - 0
+    - 1
+    - 7
+    - 12
+    - 15
+    - 18
+    - 23
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 2
+      undistort_balance_0.00:eq_unsharp@4: 7
+    mean_reprojection_error_px: 0.7461799187461218
+    max_reprojection_error_px: 1.499518663668212
+  - sample_id: 15
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/15.png
+    tag_count: 7
+    tag_ids:
+    - 2
+    - 4
+    - 6
+    - 7
+    - 8
+    - 10
+    - 17
+    strategy: undistort_balance_0.00:equalize@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 0
+      undistort_balance_0.00:equalize@4: 7
+      undistort_balance_0.00:eq_unsharp@4: 3
+    mean_reprojection_error_px: 0.7580564069674443
+    max_reprojection_error_px: 1.4118958888537207
+  - sample_id: 20
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/20.png
+    tag_count: 6
+    tag_ids:
+    - 0
+    - 4
+    - 7
+    - 10
+    - 11
+    - 17
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 4
+      undistort_balance_0.00:eq_unsharp@4: 6
+    mean_reprojection_error_px: 0.9950937084423733
+    max_reprojection_error_px: 1.8533425168119562
+  - sample_id: 21
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/21.png
+    tag_count: 10
+    tag_ids:
+    - 0
+    - 2
+    - 4
+    - 7
+    - 8
+    - 10
+    - 15
+    - 16
+    - 27
+    - 32
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 1
+      raw:eq_unsharp@4: 2
+      undistort_balance_0.00:equalize@4: 6
+      undistort_balance_0.00:eq_unsharp@4: 10
+    mean_reprojection_error_px: 0.7957168832728352
+    max_reprojection_error_px: 1.289164378866605
+  - sample_id: 22
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/22.png
+    tag_count: 6
+    tag_ids:
+    - 7
+    - 8
+    - 10
+    - 16
+    - 25
+    - 32
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 2
+      undistort_balance_0.00:equalize@4: 1
+      undistort_balance_0.00:eq_unsharp@4: 6
+    mean_reprojection_error_px: 0.8387433180815967
+    max_reprojection_error_px: 1.3972113839857594
+  - sample_id: 23
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/23.png
+    tag_count: 9
+    tag_ids:
+    - 1
+    - 6
+    - 7
+    - 8
+    - 16
+    - 26
+    - 28
+    - 31
+    - 32
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 3
+      raw:eq_unsharp@4: 4
+      undistort_balance_0.00:equalize@4: 5
+      undistort_balance_0.00:eq_unsharp@4: 9
+    mean_reprojection_error_px: 0.8728308369658767
+    max_reprojection_error_px: 1.3146284357628089
+  - sample_id: 24
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/24.png
+    tag_count: 8
+    tag_ids:
+    - 0
+    - 4
+    - 6
+    - 7
+    - 10
+    - 15
+    - 16
+    - 17
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 4
+      undistort_balance_0.00:eq_unsharp@4: 8
+    mean_reprojection_error_px: 0.7054070877028844
+    max_reprojection_error_px: 1.248223746655905
+  - sample_id: 29
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/29.png
+    tag_count: 8
+    tag_ids:
+    - 7
+    - 9
+    - 10
+    - 21
+    - 22
+    - 32
+    - 33
+    - 35
+    strategy: undistort_balance_0.00:equalize@4
+    strategy_counts:
+      raw:equalize@4: 3
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 8
+      undistort_balance_0.00:eq_unsharp@4: 7
+    mean_reprojection_error_px: 0.7674699855948479
+    max_reprojection_error_px: 1.6704434737323253
+  - sample_id: 30
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/30.png
+    tag_count: 6
+    tag_ids:
+    - 1
+    - 8
+    - 10
+    - 12
+    - 23
+    - 31
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 0
+      undistort_balance_0.00:equalize@4: 1
+      undistort_balance_0.00:eq_unsharp@4: 6
+    mean_reprojection_error_px: 0.7284285946373664
+    max_reprojection_error_px: 1.1820096425933166
+  - sample_id: 31
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/31.png
+    tag_count: 7
+    tag_ids:
+    - 4
+    - 16
+    - 18
+    - 23
+    - 28
+    - 31
+    - 32
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 0
+      raw:eq_unsharp@4: 1
+      undistort_balance_0.00:equalize@4: 6
+      undistort_balance_0.00:eq_unsharp@4: 7
+    mean_reprojection_error_px: 0.8619534828039864
+    max_reprojection_error_px: 1.6040345102324538
+  - sample_id: 35
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/35.png
+    tag_count: 9
+    tag_ids:
+    - 1
+    - 6
+    - 7
+    - 8
+    - 15
+    - 21
+    - 22
+    - 27
+    - 31
+    strategy: undistort_balance_0.00:eq_unsharp@4
+    strategy_counts:
+      raw:equalize@4: 1
+      raw:eq_unsharp@4: 0
+      undistort_balance_0.00:equalize@4: 8
+      undistort_balance_0.00:eq_unsharp@4: 9
+    mean_reprojection_error_px: 0.8800410907886147
+    max_reprojection_error_px: 1.3810298767021845
+  skipped:
+  - sample_id: 1
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/1.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 1, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 2
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/2.png
+    reason: 'only_3_valid_tags; strategies={''raw:equalize@4'': 1, ''raw:eq_unsharp@4'':
+      2, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      3}'
+  - sample_id: 3
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/3.png
+    reason: 'only_4_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      4}'
+  - sample_id: 6
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/6.png
+    reason: 'only_4_valid_tags; strategies={''raw:equalize@4'': 2, ''raw:eq_unsharp@4'':
+      2, ''undistort_balance_0.00:equalize@4'': 3, ''undistort_balance_0.00:eq_unsharp@4'':
+      4}'
+  - sample_id: 7
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/7.png
+    reason: 'only_1_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 9
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/9.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 10
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/10.png
+    reason: 'only_4_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      2, ''undistort_balance_0.00:equalize@4'': 3, ''undistort_balance_0.00:eq_unsharp@4'':
+      4}'
+  - sample_id: 11
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/11.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 12
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/12.png
+    reason: 'only_1_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 1, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 16
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/16.png
+    reason: 'only_3_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      3}'
+  - sample_id: 17
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/17.png
+    reason: 'only_1_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 18
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/18.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 19
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/19.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 1, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 25
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/25.png
+    reason: 'only_0_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      0}'
+  - sample_id: 26
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/26.png
+    reason: 'only_4_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 4, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 27
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/27.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 1, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 28
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/28.png
+    reason: 'only_3_valid_tags; strategies={''raw:equalize@4'': 1, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      3}'
+  - sample_id: 32
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/32.png
+    reason: 'only_3_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      3}'
+  - sample_id: 33
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/33.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 1, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 34
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/34.png
+    reason: 'only_2_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      2}'
+  - sample_id: 36
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/36.png
+    reason: 'only_5_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 3, ''undistort_balance_0.00:eq_unsharp@4'':
+      5}'
+  - sample_id: 37
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/37.png
+    reason: 'only_4_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      1, ''undistort_balance_0.00:equalize@4'': 2, ''undistort_balance_0.00:eq_unsharp@4'':
+      4}'
+  - sample_id: 38
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/38.png
+    reason: 'only_0_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      0}'
+  - sample_id: 39
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/39.png
+    reason: 'only_1_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 0, ''undistort_balance_0.00:eq_unsharp@4'':
+      1}'
+  - sample_id: 40
+    image: /home/chenlvping/Auto_calibration/ARM_trajectory/data/image_0615/40.png
+    reason: 'only_3_valid_tags; strategies={''raw:equalize@4'': 0, ''raw:eq_unsharp@4'':
+      0, ''undistort_balance_0.00:equalize@4'': 1, ''undistort_balance_0.00:eq_unsharp@4'':
+      3}'
