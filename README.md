@@ -31,7 +31,7 @@ Independent workspace for:
 - `data/calibration/static_pose_samples_0615/`
 - `data/calibration/image_0615/`
 - `data/calibration/handeye_0615/`
-- `data/ground_truth/trajectory_samples0614/`
+- `data/ground_truth/trajectory_samples0617/`
 - `data/evaluation/core/evo_vio_tcp_0616/`
 - `data/evaluation/core/evo_dynavins_tcp_0616/`
 - `data/evaluation/core/tcp_orientation_diagnostics_0616/`
@@ -81,8 +81,8 @@ Independent workspace for:
    - per-sample `orientation_raw`
    - per-sample `orientation_mode`
    - per-sample `raw_pose`
-   New trajectory recordings should follow the 0616 format and must keep these
-   fields so robot orientation can be rebuilt and audited later.
+   New trajectory recordings should follow the 0617 raw-pose format and must keep
+   these fields so robot orientation can be rebuilt and audited later.
 
 4. TCP accuracy evaluation
    Run `script/evaluate_vio_tcp_camera_evo.py`
@@ -94,10 +94,14 @@ Independent workspace for:
 
 ## Development Notes
 
-- Script defaults now follow the new data classification.
+- The main TCP workflow now uses the 0617 raw-pose episodes as the primary
+  reference path, especially `episode_20260617_0005` and `episode_20260617_0006`.
+- `episode_20260614_0239` remains useful as a diagnostic sample, but it is no
+  longer the preferred evaluation baseline.
 - Core results stay under `data/evaluation/core/`.
 - New reruns should prefer `data/evaluation/workbench/` so core results remain clean.
 - Historical and exploratory outputs should be moved into `data/archive/` after they stop being active.
 - Some raw VIO estimate paths and generated VINS configs still depend on external datasets, so those scripts may still need explicit `--estimate`, `--dataset`, or `--config` arguments when running on a new episode.
-- `data/ground_truth/trajectory_samples0616/trajectory_debug_rawpose_001.json`
-  is the reference example for the current ground-truth recording format.
+- `data/ground_truth/trajectory_samples0617/trajectory_sync_rawpose_005.json`
+  and `trajectory_sync_rawpose_006.json` are the reference examples for the
+  current ground-truth recording format.

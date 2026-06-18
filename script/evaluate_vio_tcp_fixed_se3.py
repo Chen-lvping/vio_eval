@@ -25,7 +25,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TCP_EVAL_SCRIPT = REPO_ROOT / "script/evaluate_vio_tcp_camera_evo.py"
 
-DEFAULT_SOURCE_ESTIMATE = Path("/home/chenlvping/6_data_use/0614 _test/episode_20260614_0239/pose_data/pose_data_right.csv")
+DEFAULT_SOURCE_ESTIMATE = Path("/home/chenlvping/6_data_use/0614 _test/episode_20260614_0239/right/pose_data.csv")
 DEFAULT_SOURCE_GT = REPO_ROOT / "data/ground_truth/trajectory_samples0614/trajectory_001.json"
 DEFAULT_TARGET_ESTIMATE = REPO_ROOT / "data/gripper_data/episode_20260617_0004/right/pose_data.csv"
 DEFAULT_TARGET_GT = REPO_ROOT / "data/ground_truth/trajectory_samples0617/trajectory_sync_rawpose_004.json"

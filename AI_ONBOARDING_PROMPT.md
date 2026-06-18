@@ -32,7 +32,7 @@
    - `data/handeye_0615`
    - `data/static_pose_samples_0615`
    - `data/image_0615`
-   - `data/trajectory_samples0614`
+   - `data/trajectory_samples0617`
    - `data/evo_vio_tcp_0616`
    - `data/evo_dynavins_tcp_0616`
    - `data/evo_tcp_visualization_0616`
@@ -82,20 +82,23 @@
   - TCP 层姿态 RMSE：`61.22 deg`
 - 这说明错误在进入 TCP 链之前就已经存在，因此 handeye 和 camera-IMU 固定变换不是主因。
 
-5. 当前最可疑的方向
-- 下一步最该重点检查的是机器人轨迹真值的姿态 quaternion 是否可信，而不是继续优先怀疑 VINS 外参链。
-- 原因是当前真值文件 `trajectory_001.json` 只有：
+5. 当前主流程
+- 现在的主评估流程以 0617 的 raw-pose episode 为准，尤其是
+  `episode_20260617_0005` 和 `episode_20260617_0006`。
+- 这些 episode 的 ground truth 文件包含：
   - `timestamp`
   - `position_m`
   - `quaternion_xyzw`
-- 该文件没有保存 `raw_pose`，因此无法像手眼静态样本那样重新验证 `raw_rpy / rotvec / quaternion` 三种机器人姿态解释。
-- 现有手眼标定结果已经表明：机器人姿态必须按 `raw_rpy` 解释；如果轨迹录制阶段 `quaternion_xyzw` 的生成方式或机器人 TCP frame 定义存在偏差，就会出现“平移很好、姿态整体差几十度”的现象。
+  - `orientation_raw`
+  - `orientation_mode`
+  - `raw_pose`
+- 这意味着可以像手眼静态样本那样，继续验证 `raw_rpy / rotvec / quaternion`
+  三种机器人姿态解释。
 
-6. 建议的新验证实验
-- 重新录一小段机器人轨迹，并强制保存 `raw_pose`。
-- 离线同时生成 `raw_rpy` 和 `rotvec` 两版 ground truth。
-- 用同一套 TCP 评估流程分别评估两版真值。
-- 这个实验是当前最快判断 `60 deg` 姿态误差是否来自机器人真值姿态定义的问题。
+6. 0614 现状
+- `episode_20260614_0239` 仍可用于历史诊断，但不再作为主基线。
+- 0614 的 `trajectory_001.json` 没有 `raw_pose`，所以它更适合做辅助分析，
+  不适合作为主流程的精度基准。
 
 如果你已经完成初步阅读，请先给我一段简短总结：
 - 这个项目是做什么的

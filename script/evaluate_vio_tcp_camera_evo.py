@@ -5,7 +5,8 @@ Evaluate a VIO IMU trajectory against robot TCP ground truth with evo.
 Coordinate convention used here:
   * robot JSON pose is T_base_tcp, i.e. TCP child pose in base parent frame.
   * T_tcp_left_camera is camera child pose in TCP parent frame.
-  * VIO CSV pose is T_world_imu, i.e. IMU child pose in VIO world parent frame.
+  * VIO CSV pose is usually T_world_imu for raw-pose episodes, or
+    T_world_base_link when the estimate-frame is vins_base_link.
   * T_left_camera_imu is IMU child pose in left_camera parent frame.
 
 Therefore:
@@ -44,7 +45,7 @@ except Exception:  # pragma: no cover
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVAL_HELPERS = REPO_ROOT / "script/evaluate_vins_accuracy.py"
-DEFAULT_ESTIMATE = Path("/home/chenlvping/0614 _test/episode_20260614_0239/pose_data/pose_data_right.csv")
+DEFAULT_ESTIMATE = Path("/home/chenlvping/0614 _test/episode_20260614_0239/right/pose_data.csv")
 DEFAULT_GROUND_TRUTH = REPO_ROOT / "data/ground_truth/trajectory_samples0614/trajectory_001.json"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data/evaluation/workbench/evo_vio_tcp"
 DEFAULT_HAND_EYE = REPO_ROOT / "data/calibration/handeye_0615/handeye_result.yaml"
@@ -108,14 +109,51 @@ def load_tcp_left_camera_transform(path: Path | None) -> np.ndarray:
     return matrix
 
 
+def _pose_position_xyz(sample: dict) -> List[float]:
+    pos = sample.get("position_m", sample.get("position", sample.get("pos")))
+    if isinstance(pos, dict):
+        lower = {str(k).strip().lower(): v for k, v in pos.items()}
+        for keys in (("x", "y", "z"), ("px", "py", "pz")):
+            if all(k in lower for k in keys):
+                return [float(lower[k]) for k in keys]
+    if isinstance(pos, (list, tuple)) and len(pos) >= 3:
+        return [float(pos[0]), float(pos[1]), float(pos[2])]
+    raise KeyError("position_m")
+
+
+def _pose_quaternion_xyzw(sample: dict) -> List[float]:
+    quat = (
+        sample.get("quaternion_xyzw")
+        or sample.get("quaternion")
+        or sample.get("quat_xyzw")
+        or sample.get("quaternion_wxyz")
+        or sample.get("quat_wxyz")
+    )
+    if isinstance(quat, dict):
+        lower = {str(k).strip().lower(): v for k, v in quat.items()}
+        if all(k in lower for k in ("x", "y", "z", "w")):
+            return [float(lower["x"]), float(lower["y"]), float(lower["z"]), float(lower["w"])]
+        if all(k in lower for k in ("w", "x", "y", "z")):
+            return [float(lower["x"]), float(lower["y"]), float(lower["z"]), float(lower["w"])]
+    if isinstance(quat, (list, tuple)) and len(quat) >= 4:
+        # Accept either xyzw or wxyz by assuming scalar-last when the source is a list.
+        if abs(float(quat[0])) > 0.5 and abs(float(quat[3])) <= 1.0:
+            return [float(quat[1]), float(quat[2]), float(quat[3]), float(quat[0])]
+        return [float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])]
+    raise KeyError("quaternion_xyzw")
+
+
 def load_robot_tcp_trajectory(path: Path, helpers: Dict[str, object]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     data = json.loads(path.read_text(encoding="utf-8"))
     samples = data.get("samples", data)
     times: List[float] = []
     poses: List[np.ndarray] = []
     for sample in samples:
-        t_base_tcp = helpers["transform_from_pose"](sample["position_m"], sample["quaternion_xyzw"])
-        times.append(normalize_timestamp(float(sample["timestamp"])))
+        timestamp = sample.get("timestamp", sample.get("timestamp_s", sample.get("timestamp_us")))
+        if timestamp is None:
+            raise KeyError("timestamp")
+        t_base_tcp = helpers["transform_from_pose"](_pose_position_xyz(sample), _pose_quaternion_xyzw(sample))
+        times.append(normalize_timestamp(float(timestamp)))
         poses.append(t_base_tcp)
     order = np.argsort(np.asarray(times, dtype=float))
     poses_arr = np.asarray(poses, dtype=float)[order]
@@ -223,6 +261,54 @@ def match_ground_truth(
     )
 
 
+def associate_by_nearest_time(
+    ref_times: np.ndarray,
+    ref_pos: np.ndarray,
+    ref_rot: np.ndarray,
+    est_times: np.ndarray,
+    est_pos: np.ndarray,
+    est_rot: np.ndarray,
+    time_offset_s: float,
+    max_diff_s: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    shifted_est = np.asarray(est_times, dtype=float) + float(time_offset_s)
+    out_times: List[float] = []
+    out_ref_pos: List[np.ndarray] = []
+    out_ref_rot: List[np.ndarray] = []
+    out_est_pos: List[np.ndarray] = []
+    out_est_rot: List[np.ndarray] = []
+
+    est_start = 0
+    for ref_idx, ref_t in enumerate(ref_times):
+        insert_at = int(np.searchsorted(shifted_est[est_start:], ref_t, side="left")) + est_start
+        candidates: List[int] = []
+        if insert_at < shifted_est.size:
+            candidates.append(insert_at)
+        if insert_at - 1 >= est_start:
+            candidates.append(insert_at - 1)
+        if not candidates:
+            continue
+        best_est = min(candidates, key=lambda idx: abs(shifted_est[idx] - ref_t))
+        if abs(shifted_est[best_est] - ref_t) > max_diff_s:
+            continue
+        out_times.append(float(ref_t))
+        out_ref_pos.append(ref_pos[ref_idx])
+        out_ref_rot.append(ref_rot[ref_idx])
+        out_est_pos.append(est_pos[best_est])
+        out_est_rot.append(est_rot[best_est])
+        est_start = best_est + 1
+
+    if not out_times:
+        raise RuntimeError("no timestamp association between reference and estimate trajectory")
+    return (
+        np.asarray(out_times, dtype=float),
+        np.asarray(out_ref_pos, dtype=float),
+        np.asarray(out_ref_rot, dtype=float),
+        np.asarray(out_est_pos, dtype=float),
+        np.asarray(out_est_rot, dtype=float),
+    )
+
+
 def write_tum(path: Path, times: np.ndarray, positions: np.ndarray, rotations: np.ndarray, helpers: Dict[str, object]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for t, pos, rot in zip(times, positions, rotations):
@@ -277,6 +363,75 @@ def compute_internal_se3_metrics(gt_pos, gt_rot, est_pos, est_rot, times, helper
     }
 
 
+def default_time_offset_guess(gt_times: np.ndarray, est_times: np.ndarray) -> float:
+    if gt_times.size == 0 or est_times.size == 0:
+        return 0.0
+    start_guess = float(gt_times[0] - est_times[0])
+    end_guess = float(gt_times[-1] - est_times[-1])
+    return 0.5 * (start_guess + end_guess)
+
+
+def scan_evo_time_offset(
+    gt_times: np.ndarray,
+    gt_pos: np.ndarray,
+    gt_rot: np.ndarray,
+    est_times: np.ndarray,
+    est_pos: np.ndarray,
+    est_rot: np.ndarray,
+    helpers: Dict[str, object],
+    center_offset_s: float,
+    span_s: float,
+    step_s: float,
+    max_diff_s: float,
+    score_metric: str,
+    min_samples: int,
+) -> Tuple[float, List[Dict[str, float]]]:
+    offsets = np.arange(center_offset_s - span_s, center_offset_s + span_s + 0.5 * step_s, step_s)
+    rows: List[Dict[str, float]] = []
+    best: Optional[Tuple[float, int, float]] = None
+
+    for offset in offsets:
+        try:
+            assoc_times, assoc_gt_pos, assoc_gt_rot, assoc_est_pos, assoc_est_rot = associate_by_nearest_time(
+                gt_times,
+                gt_pos,
+                gt_rot,
+                est_times,
+                est_pos,
+                est_rot,
+                float(offset),
+                max_diff_s,
+            )
+        except RuntimeError:
+            continue
+        if assoc_times.size < min_samples:
+            continue
+        se3, _, _, _, _ = helpers["evaluate_alignment"](
+            "se3", False, assoc_gt_pos, assoc_gt_rot, assoc_est_pos, assoc_est_rot, assoc_times, 1.0, 30
+        )
+        trans_rmse_mm = float(se3.translation_metrics_m["rmse"] * 1000.0)
+        rot_rmse_deg = float(se3.rotation_metrics_deg["rmse"]) if se3.rotation_metrics_deg else float("nan")
+        duration_s = float(assoc_times[-1] - assoc_times[0]) if assoc_times.size > 1 else 0.0
+        row = {
+            "offset_s": float(offset),
+            "samples": int(assoc_times.size),
+            "duration_s": duration_s,
+            "translation_rmse_mm": trans_rmse_mm,
+            "rotation_rmse_deg": rot_rmse_deg,
+            "first_time_s": float(assoc_times[0]),
+            "last_time_s": float(assoc_times[-1]),
+        }
+        rows.append(row)
+        score_value = trans_rmse_mm if score_metric == "translation" else rot_rmse_deg
+        candidate = (score_value, -int(assoc_times.size), float(offset))
+        if best is None or candidate < best:
+            best = candidate
+
+    if best is None:
+        raise RuntimeError("time-offset auto scan found no valid association window")
+    return best[2], rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--estimate", type=Path, default=DEFAULT_ESTIMATE)
@@ -294,7 +449,25 @@ def main() -> int:
         default="imu",
         help="semantic frame stored in the estimate CSV. Use camera for cam0 pose CSV, imu for old 0614 chain, or vins_base_link for VINS-Fusion base_link output.",
     )
+    parser.add_argument(
+        "--time-association",
+        choices=["interpolate", "evo"],
+        default="interpolate",
+        help="interpolate: interpolate GT to estimate timestamps before exporting TUM; evo: export raw timestamps and let evo associate with --t_offset/--t_max_diff.",
+    )
     parser.add_argument("--max-time-gap-ms", type=float, default=80.0)
+    parser.add_argument("--time-offset-sec", type=float, default=0.0, help="Offset added to estimate timestamps for evo-style association")
+    parser.add_argument("--t-max-diff-sec", type=float, default=0.01, help="Max timestamp difference for evo-style association")
+    parser.add_argument("--time-offset-auto", action="store_true", help="Auto-scan the best evo time offset around a center value")
+    parser.add_argument("--time-offset-auto-span-sec", type=float, default=2.0, help="Search +/- span around the auto-scan center")
+    parser.add_argument("--time-offset-auto-step-sec", type=float, default=0.01, help="Step size for auto-scan")
+    parser.add_argument(
+        "--time-offset-auto-score",
+        choices=["translation", "rotation"],
+        default="translation",
+        help="Metric minimized during evo time-offset auto scan",
+    )
+    parser.add_argument("--time-offset-auto-min-samples", type=int, default=50, help="Minimum associated samples required for a scan candidate")
     parser.add_argument("--rpe-distance-m", type=float, default=0.05)
     args = parser.parse_args()
 
@@ -314,25 +487,85 @@ def main() -> int:
         t_tcp_left_camera,
         args.estimate_frame,
     )
-    times, gt_pos, gt_rot, est_pos, est_rot = match_ground_truth(
-        gt_times,
-        gt_pos_all,
-        gt_rot_all,
-        est_times,
-        est_pos_all,
-        est_rot_all,
-        helpers,
-        args.max_time_gap_ms * 1e-3,
-    )
+    auto_time_offset: Optional[Dict[str, object]] = None
+    if args.time_association == "evo" and args.time_offset_auto:
+        center_offset_s = args.time_offset_sec
+        if abs(center_offset_s) <= 1e-12:
+            center_offset_s = default_time_offset_guess(gt_times, est_times)
+        best_offset_s, scan_rows = scan_evo_time_offset(
+            gt_times,
+            gt_pos_all,
+            gt_rot_all,
+            est_times,
+            est_pos_all,
+            est_rot_all,
+            helpers,
+            center_offset_s,
+            float(args.time_offset_auto_span_sec),
+            float(args.time_offset_auto_step_sec),
+            float(args.t_max_diff_sec),
+            args.time_offset_auto_score,
+            int(args.time_offset_auto_min_samples),
+        )
+        args.time_offset_sec = float(best_offset_s)
+        auto_time_offset = {
+            "enabled": True,
+            "center_offset_s": float(center_offset_s),
+            "chosen_offset_s": float(best_offset_s),
+            "span_s": float(args.time_offset_auto_span_sec),
+            "step_s": float(args.time_offset_auto_step_sec),
+            "score": args.time_offset_auto_score,
+            "min_samples": int(args.time_offset_auto_min_samples),
+            "rows": scan_rows,
+        }
+
+    if args.time_association == "interpolate":
+        times, gt_pos, gt_rot, est_pos, est_rot = match_ground_truth(
+            gt_times,
+            gt_pos_all,
+            gt_rot_all,
+            est_times,
+            est_pos_all,
+            est_rot_all,
+            helpers,
+            args.max_time_gap_ms * 1e-3,
+        )
+        tum_gt_times = times
+        tum_est_times = times
+    else:
+        times, gt_pos, gt_rot, est_pos, est_rot = associate_by_nearest_time(
+            gt_times,
+            gt_pos_all,
+            gt_rot_all,
+            est_times,
+            est_pos_all,
+            est_rot_all,
+            args.time_offset_sec,
+            args.t_max_diff_sec,
+        )
+        tum_gt_times = gt_times
+        tum_est_times = est_times
+    associated_sample_count = int(times.size)
+    associated_duration_s = float(times[-1] - times[0]) if times.size > 1 else 0.0
 
     gt_tum = output_dir / "gt_tcp.tum"
     est_tum = output_dir / "vio_tcp_from_imu_left_camera.tum"
-    write_tum(gt_tum, times, gt_pos, gt_rot, helpers)
-    write_tum(est_tum, times, est_pos, est_rot, helpers)
+    gt_matched_tum = output_dir / "gt_tcp_matched.tum"
+    est_matched_tum = output_dir / "vio_tcp_matched.tum"
+    if args.time_association == "interpolate":
+        write_tum(gt_tum, tum_gt_times, gt_pos, gt_rot, helpers)
+        write_tum(est_tum, tum_est_times, est_pos, est_rot, helpers)
+    else:
+        write_tum(gt_tum, tum_gt_times, gt_pos_all, gt_rot_all, helpers)
+        write_tum(est_tum, tum_est_times, est_pos_all, est_rot_all, helpers)
+    write_tum(gt_matched_tum, times, gt_pos, gt_rot, helpers)
+    write_tum(est_matched_tum, times, est_pos, est_rot, helpers)
 
     evo_ape = str(Path.home() / ".local/bin/evo_ape")
     evo_rpe = str(Path.home() / ".local/bin/evo_rpe")
     common = ["tum", str(gt_tum), str(est_tum), "--no_warnings", "-a"]
+    if args.time_association == "evo":
+        common.extend(["--t_offset", str(args.time_offset_sec), "--t_max_diff", str(args.t_max_diff_sec)])
     commands = [
         (
             "ape_translation_se3",
@@ -394,8 +627,10 @@ def main() -> int:
         "ground_truth": str(gt_path),
         "gt_tum": str(gt_tum),
         "estimate_tum": str(est_tum),
-        "matched_samples": int(times.size),
-        "matched_duration_s": float(times[-1] - times[0]) if times.size > 1 else 0.0,
+        "matched_gt_tum": str(gt_matched_tum),
+        "matched_estimate_tum": str(est_matched_tum),
+        "matched_samples": associated_sample_count,
+        "matched_duration_s": associated_duration_s,
         "evo": {name: parse_evo_stdout(text) for name, text in outputs.items()},
         "evo_commands": command_texts,
         "internal_se3": internal,
@@ -407,8 +642,23 @@ def main() -> int:
             "T_vins_base_link_imu": T_VINS_BASE_LINK_IMU.tolist(),
         },
         "estimate_frame": args.estimate_frame,
+        "time_association": args.time_association,
+        "time_offset_sec": args.time_offset_sec,
+        "t_max_diff_sec": args.t_max_diff_sec,
+        "time_offset_auto": auto_time_offset,
     }
     (output_dir / "metrics.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if auto_time_offset:
+        scan_rows = auto_time_offset["rows"]
+        with (output_dir / "time_offset_scan.csv").open("w", encoding="utf-8") as handle:
+            handle.write("offset_s,samples,duration_s,translation_rmse_mm,rotation_rmse_deg,first_time_s,last_time_s\n")
+            for row in scan_rows:
+                handle.write(
+                    f"{row['offset_s']:.9f},{row['samples']},{row['duration_s']:.9f},"
+                    f"{row['translation_rmse_mm']:.6f},{row['rotation_rmse_deg']:.6f},"
+                    f"{row['first_time_s']:.9f},{row['last_time_s']:.9f}\n"
+                )
+        (output_dir / "time_offset_scan.json").write_text(json.dumps(scan_rows, ensure_ascii=False, indent=2), encoding="utf-8")
 
     with (output_dir / "summary.csv").open("w", encoding="utf-8") as handle:
         handle.write("metric,rmse,mean,median,min,max,std,unit\n")
@@ -429,6 +679,8 @@ def main() -> int:
         handle.write(f"- Output directory: `{output_dir}`\n")
         handle.write(f"- Reference TUM: `{gt_tum}`\n")
         handle.write(f"- Estimated TUM: `{est_tum}`\n\n")
+        handle.write(f"- Matched reference TUM: `{gt_matched_tum}`\n")
+        handle.write(f"- Matched estimated TUM: `{est_matched_tum}`\n\n")
         handle.write("## Coordinate Chain\n\n")
         if args.estimate_frame == "camera":
             handle.write("The VIO CSV stores the left/cam0 camera pose in the VINS world frame:\n\n")
@@ -469,8 +721,22 @@ def main() -> int:
         handle.write("```text\nT_base_tcp\n```\n\n")
         handle.write("evo `--align` estimates the rigid transform from VINS world to robot base, then computes the TCP trajectory error in one common frame.\n\n")
         handle.write("## Time Association\n\n")
-        handle.write("The robot trajectory is interpolated to the VIO timestamps before exporting the TUM files.\n")
-        handle.write(f"The interpolation bracket threshold is `{args.max_time_gap_ms:.1f} ms`.\n\n")
+        if args.time_association == "interpolate":
+            handle.write("The robot trajectory is interpolated to the VIO timestamps before exporting the TUM files.\n")
+            handle.write(f"The interpolation bracket threshold is `{args.max_time_gap_ms:.1f} ms`.\n\n")
+        else:
+            handle.write("Both TCP trajectories keep their raw timestamps in the exported TUM files.\n")
+            handle.write("evo performs the timestamp association directly using the configured time offset and max difference.\n\n")
+            if auto_time_offset:
+                handle.write("- Time offset was selected automatically by scan.\n")
+                handle.write(f"- Auto-scan center: `{auto_time_offset['center_offset_s']:.9f} s`\n")
+                handle.write(f"- Auto-scan span: `+/- {auto_time_offset['span_s']:.9f} s`\n")
+                handle.write(f"- Auto-scan step: `{auto_time_offset['step_s']:.9f} s`\n")
+                handle.write(f"- Auto-scan score: `{auto_time_offset['score']}`\n")
+                handle.write(f"- Auto-scan min samples: `{auto_time_offset['min_samples']}`\n")
+                handle.write("- Auto-scan files: `time_offset_scan.csv`, `time_offset_scan.json`\n\n")
+            handle.write(f"- evo `--t_offset`: `{args.time_offset_sec:.9f} s`\n")
+            handle.write(f"- evo `--t_max_diff`: `{args.t_max_diff_sec:.9f} s`\n\n")
         handle.write(f"- Matched samples: {times.size}\n")
         handle.write(f"- Matched duration: {payload['matched_duration_s']:.3f} s\n")
         handle.write(f"- First matched timestamp: {float(times[0]):.9f} s\n")

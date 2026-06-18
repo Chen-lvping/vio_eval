@@ -58,18 +58,30 @@ def stride_indices(count: int, max_points: int) -> np.ndarray:
     return np.unique(np.r_[indices, count - 1])
 
 
-def make_algorithm(eval_dir: Path, max_points: int, comparison: Dict[str, object]) -> dict:
+def resolve_viewer_tums(eval_dir: Path) -> tuple[Path, Path, str]:
+    matched_gt = eval_dir / "gt_tcp_matched.tum"
+    matched_est = eval_dir / "vio_tcp_matched.tum"
+    if matched_gt.is_file() and matched_est.is_file():
+        return matched_gt, matched_est, "matched"
+    return eval_dir / "gt_tcp.tum", eval_dir / "vio_tcp_from_imu_left_camera.tum", "raw"
+
+
+def make_algorithm(eval_dir: Path, max_points: int, comparison: Dict[str, object]) -> tuple[dict, dict]:
     helpers = comparison["load_helpers"]()
-    gt_t, gt_pos, gt_rot = comparison["read_tum"](eval_dir / "gt_tcp.tum", helpers)
-    est_t, est_pos, est_rot = comparison["read_tum"](eval_dir / "vio_tcp_from_imu_left_camera.tum", helpers)
+    gt_tum, est_tum, source_mode = resolve_viewer_tums(eval_dir)
+    gt_t, gt_pos, gt_rot = comparison["read_tum"](gt_tum, helpers)
+    est_t, est_pos, est_rot = comparison["read_tum"](est_tum, helpers)
     if gt_t.shape != est_t.shape or float(np.max(np.abs(gt_t - est_t))) > 1e-6:
-        raise ValueError(f"{eval_dir} gt/estimate TUM files are not timestamp-aligned")
+        raise ValueError(f"{eval_dir} viewer TUM files are not timestamp-aligned")
 
     se3_pos, se3_rot, se3_errors = comparison["align_positions"](
         helpers, gt_pos, gt_rot, est_pos, est_rot, gt_t, False
     )
     sim3_pos, sim3_rot, sim3_errors = comparison["align_positions"](
         helpers, gt_pos, gt_rot, est_pos, est_rot, gt_t, True
+    )
+    anchor_pos, anchor_rot, anchor_errors = comparison["anchor_start_positions"](
+        gt_pos, gt_rot, est_pos, est_rot
     )
     raw_errors = np.linalg.norm(est_pos - gt_pos, axis=1)
     idx = stride_indices(gt_t.size, max_points)
@@ -96,13 +108,16 @@ def make_algorithm(eval_dir: Path, max_points: int, comparison: Dict[str, object
                 "se3_r": se3_rot[i].tolist(),
                 "sim3": sim3_pos[i].tolist(),
                 "sim3_r": sim3_rot[i].tolist(),
+                "anchor": anchor_pos[i].tolist(),
+                "anchor_r": anchor_rot[i].tolist(),
                 "raw_error_m": float(raw_errors[i]),
                 "se3_error_m": float(se3_errors[i]),
                 "sim3_error_m": float(sim3_errors[i]),
+                "anchor_error_m": float(anchor_errors[i]),
             }
         )
 
-    return {
+    algorithm = {
         "name": "VIO TCP",
         "color": "#4ea1ff",
         "eval_dir": str(eval_dir),
@@ -111,6 +126,12 @@ def make_algorithm(eval_dir: Path, max_points: int, comparison: Dict[str, object
         "metrics": metrics,
         "points": points,
     }
+    sources = {
+        "gt_tum": str(gt_tum),
+        "estimate_tum": str(est_tum),
+        "association_source": source_mode,
+    }
+    return algorithm, sources
 
 
 def write_viewer_summary(output_dir: Path, algorithms: Iterable[dict]) -> Path:
@@ -169,15 +190,16 @@ def main() -> int:
     episode_label = infer_episode_label(eval_dir)
 
     comparison = load_comparison_module()
-    algorithm = make_algorithm(eval_dir, args.max_points, comparison)
+    algorithm, sources = make_algorithm(eval_dir, args.max_points, comparison)
     payload = {
         "subtitle": f"{episode_label}: robot TCP GT vs VIO-derived TCP. Drag the 3D view to rotate; wheel to zoom.",
         "inputs": {
             "eval_dir": str(eval_dir),
-            "gt_tum": str(eval_dir / "gt_tcp.tum"),
-            "estimate_tum": str(eval_dir / "vio_tcp_from_imu_left_camera.tum"),
+            "gt_tum": sources["gt_tum"],
+            "estimate_tum": sources["estimate_tum"],
+            "association_source": sources["association_source"],
             "frame": "robot TCP",
-            "display_modes": "Raw / SE(3) / Sim(3)",
+            "display_modes": "Raw / SE(3) / Sim(3) / Anchor-start",
         },
         "algorithms": [algorithm],
     }

@@ -1,24 +1,22 @@
-# Python byte-compiled / cache
+# Python bytecode / cache
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
 
-# Generated output directories
+# Local generated output
 graphify-out/
 
-# Large data directories — not tracked in git (tracked separately or on NAS)
-data/archive/
-data/evaluation/
-data/gripper_data/
-data/gripper_data_1/
-data/ground_truth/
-data/calibration/static_pose_samples_*/
-data/calibration/image_*/
-
-# macOS
+# IDE / OS
 .DS_Store
-
-# IDE
 .vscode/
 .idea/
+
+# Default policy: keep data out of git unless explicitly whitelisted.
+data/**
+!data/
+!data/DATA_LAYOUT.md
+!data/calibration/
+!data/calibration/camera_cam0_640x400_intrinsics.yaml
+!data/calibration/handeye_0615/
+!data/calibration/handeye_0615/*.yaml

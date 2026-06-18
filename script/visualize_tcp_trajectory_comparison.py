@@ -148,6 +148,7 @@ pre {
       <div class="row">
         <button id="se3Btn" class="active">SE(3)</button>
         <button id="sim3Btn">Sim(3)</button>
+        <button id="anchorBtn">Anchor-start</button>
         <button id="rawBtn">Raw</button>
       </div>
     </div>
@@ -555,7 +556,7 @@ function drawAll() {
 
 function setMode(next) {
   mode = next;
-  for (const id of ["se3Btn", "sim3Btn", "rawBtn"]) document.getElementById(id).classList.remove("active");
+  for (const id of ["se3Btn", "sim3Btn", "anchorBtn", "rawBtn"]) document.getElementById(id).classList.remove("active");
   document.getElementById(`${next}Btn`).classList.add("active");
   drawAll();
 }
@@ -568,6 +569,7 @@ scrub.max = Math.max(0, data.algorithms[0].points.length - 1);
 scrub.addEventListener("input", () => { activeIndex = Number(scrub.value); drawAll(); });
 document.getElementById("se3Btn").onclick = () => setMode("se3");
 document.getElementById("sim3Btn").onclick = () => setMode("sim3");
+document.getElementById("anchorBtn").onclick = () => setMode("anchor");
 document.getElementById("rawBtn").onclick = () => setMode("raw");
 const view3d = document.getElementById("view3d");
 view3d.addEventListener("mousedown", event => {
@@ -658,14 +660,65 @@ def align_positions(
     return aligned, aligned_rot, errors
 
 
+def anchor_start_positions(
+    gt_pos: np.ndarray,
+    gt_rot: np.ndarray,
+    est_pos: np.ndarray,
+    est_rot: np.ndarray,
+):
+    t_gt0 = np.eye(4, dtype=float)
+    t_gt0[:3, :3] = gt_rot[0]
+    t_gt0[:3, 3] = gt_pos[0]
+    t_est0 = np.eye(4, dtype=float)
+    t_est0[:3, :3] = est_rot[0]
+    t_est0[:3, 3] = est_pos[0]
+    t_align = t_gt0 @ np.linalg.inv(t_est0)
+
+    aligned_pos = []
+    aligned_rot = []
+    for pos, rot in zip(est_pos, est_rot):
+        pose = np.eye(4, dtype=float)
+        pose[:3, :3] = rot
+        pose[:3, 3] = pos
+        pose_aligned = t_align @ pose
+        aligned_pos.append(pose_aligned[:3, 3].copy())
+        aligned_rot.append(pose_aligned[:3, :3].copy())
+
+    aligned_pos_arr = np.asarray(aligned_pos, dtype=float)
+    aligned_rot_arr = np.asarray(aligned_rot, dtype=float)
+    errors = np.linalg.norm(aligned_pos_arr - gt_pos, axis=1)
+    return aligned_pos_arr, aligned_rot_arr, errors
+
+
+def resolve_eval_tum_paths(eval_dir: Path) -> tuple[Path, Path]:
+    gt_candidates = [
+        eval_dir / "gt_tcp_matched.tum",
+        eval_dir / "gt_tcp.tum",
+    ]
+    est_candidates = [
+        eval_dir / "vio_tcp_matched.tum",
+        eval_dir / "vio_tcp_from_imu_left_camera.tum",
+        eval_dir / "vio_tcp_from_vins_base_link_left_camera.tum",
+        eval_dir / "vio_tcp_from_camera.tum",
+    ]
+
+    gt_path = next((path for path in gt_candidates if path.is_file()), None)
+    est_path = next((path for path in est_candidates if path.is_file()), None)
+    if gt_path is None or est_path is None:
+        raise FileNotFoundError(f"{eval_dir} missing trajectory TUM files for comparison viewer")
+    return gt_path, est_path
+
+
 def algo_payload(name: str, color: str, eval_dir: Path, max_points: int, helpers: Dict[str, object]) -> dict:
-    gt_t, gt_pos, gt_rot = read_tum(eval_dir / "gt_tcp.tum", helpers)
-    est_t, est_pos, est_rot = read_tum(eval_dir / "vio_tcp_from_imu_left_camera.tum", helpers)
+    gt_path, est_path = resolve_eval_tum_paths(eval_dir)
+    gt_t, gt_pos, gt_rot = read_tum(gt_path, helpers)
+    est_t, est_pos, est_rot = read_tum(est_path, helpers)
     if gt_t.shape != est_t.shape or np.max(np.abs(gt_t - est_t)) > 1e-6:
         raise ValueError(f"{eval_dir} gt/estimate TUM files are not timestamp-aligned")
 
     se3_pos, se3_rot, se3_errors = align_positions(helpers, gt_pos, gt_rot, est_pos, est_rot, gt_t, False)
     sim3_pos, sim3_rot, sim3_errors = align_positions(helpers, gt_pos, gt_rot, est_pos, est_rot, gt_t, True)
+    anchor_pos, anchor_rot, anchor_errors = anchor_start_positions(gt_pos, gt_rot, est_pos, est_rot)
     raw_errors = np.linalg.norm(est_pos - gt_pos, axis=1)
     idx = stride_indices(gt_t.size, max_points)
     t0 = float(gt_t[0])
@@ -690,9 +743,12 @@ def algo_payload(name: str, color: str, eval_dir: Path, max_points: int, helpers
                 "se3_r": se3_rot[i].tolist(),
                 "sim3": sim3_pos[i].tolist(),
                 "sim3_r": sim3_rot[i].tolist(),
+                "anchor": anchor_pos[i].tolist(),
+                "anchor_r": anchor_rot[i].tolist(),
                 "raw_error_m": float(raw_errors[i]),
                 "se3_error_m": float(se3_errors[i]),
                 "sim3_error_m": float(sim3_errors[i]),
+                "anchor_error_m": float(anchor_errors[i]),
             }
         )
     return {

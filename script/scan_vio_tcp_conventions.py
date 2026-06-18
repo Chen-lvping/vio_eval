@@ -29,7 +29,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HELPERS_PATH = REPO_ROOT / "script/evaluate_vins_accuracy.py"
 
-DEFAULT_ESTIMATE = Path("/home/chenlvping/6_data_use/0614 _test/episode_20260614_0239/pose_data/pose_data_right.csv")
+DEFAULT_ESTIMATE = Path("/home/chenlvping/6_data_use/0614 _test/episode_20260614_0239/right/pose_data.csv")
 DEFAULT_GROUND_TRUTH = REPO_ROOT / "data/ground_truth/trajectory_samples0614/trajectory_001.json"
 DEFAULT_CALIBRATION = Path("/home/chenlvping/6_data_use/0614 _test/episode_20260614_0239/calibration.json")
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data/evaluation/workbench/convention_scan"
@@ -113,8 +113,24 @@ def load_robot_tcp(path: Path, helpers: Dict[str, object]) -> Tuple[np.ndarray, 
     times: List[float] = []
     poses: List[np.ndarray] = []
     for sample in samples:
-        times.append(normalize_timestamp(sample["timestamp"]))
-        poses.append(helpers["transform_from_pose"](sample["position_m"], sample["quaternion_xyzw"]))
+        timestamp = sample.get("timestamp", sample.get("timestamp_s", sample.get("timestamp_us")))
+        if timestamp is None:
+            raise KeyError("timestamp_s")
+        position = sample.get("position_m", sample.get("position"))
+        quat = sample.get("quaternion_xyzw", sample.get("quaternion_wxyz"))
+        if position is None or quat is None:
+            raise KeyError("position_m/quaternion")
+        if isinstance(position, dict):
+            position = [position["x"], position["y"], position["z"]]
+        times.append(normalize_timestamp(float(timestamp)))
+        if "quaternion_wxyz" in sample and "quaternion_xyzw" not in sample:
+            quat = [quat["x"], quat["y"], quat["z"], quat["w"]]
+        if isinstance(quat, dict):
+            if "w" in quat:
+                quat = [quat["x"], quat["y"], quat["z"], quat["w"]]
+            else:
+                quat = [quat["x"], quat["y"], quat["z"], quat["w"]]
+        poses.append(helpers["transform_from_pose"](position, quat))
     order = np.argsort(np.asarray(times, dtype=float))
     poses_arr = np.asarray(poses, dtype=float)[order]
     return np.asarray(times, dtype=float)[order], poses_arr[:, :3, 3], poses_arr[:, :3, :3]

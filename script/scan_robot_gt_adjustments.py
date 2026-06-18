@@ -30,7 +30,7 @@ import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VIO_TCP_EVAL_PATH = REPO_ROOT / "script/evaluate_vio_tcp_camera_evo.py"
-DEFAULT_ESTIMATE = Path("/home/chenlvping/0614 _test/episode_20260614_0239/pose_data/pose_data_right.csv")
+DEFAULT_ESTIMATE = Path("/home/chenlvping/0614 _test/episode_20260614_0239/right/pose_data.csv")
 DEFAULT_GROUND_TRUTH = REPO_ROOT / "data/ground_truth/trajectory_samples0614/trajectory_001.json"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data/evaluation/workbench/robot_gt_adjustment_scan"
 DEFAULT_HAND_EYE = REPO_ROOT / "data/calibration/handeye_0615/handeye_result.yaml"
