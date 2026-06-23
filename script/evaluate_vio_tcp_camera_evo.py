@@ -4,21 +4,21 @@ Evaluate a VIO IMU trajectory against robot TCP ground truth with evo.
 
 Coordinate convention used here:
   * robot JSON pose is T_base_tcp, i.e. TCP child pose in base parent frame.
-  * T_tcp_left_camera is camera child pose in TCP parent frame.
+  * T_tcp_camera is camera child pose in TCP parent frame.
   * VIO CSV pose is usually T_world_imu for raw-pose episodes, or
     T_world_base_link when the estimate-frame is vins_base_link.
-  * T_left_camera_imu is IMU child pose in left_camera parent frame.
+  * T_camera_imu is IMU child pose in cam0 parent frame.
 
 Therefore:
   * ground truth TCP pose: T_base_tcp from robot JSON.
   * estimated TCP pose:
       T_world_tcp = T_world_imu
-                    @ inverse(T_left_camera_imu)
-                    @ inverse(T_tcp_left_camera)
+                    @ inverse(T_camera_imu)
+                    @ inverse(T_tcp_camera)
 
-    If --estimate-frame camera is used, the CSV is already T_world_left_camera
+    If --estimate-frame camera is used, the CSV is already T_world_camera
     and the script uses:
-      T_world_tcp = T_world_left_camera @ inverse(T_tcp_left_camera)
+      T_world_tcp = T_world_camera @ inverse(T_tcp_camera)
 
 evo --align then estimates the rigid transform from VINS world to robot base
 and evaluates both TCP trajectories in the same aligned frame.
@@ -50,7 +50,7 @@ DEFAULT_GROUND_TRUTH = REPO_ROOT / "data/ground_truth/trajectory_samples0614/tra
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data/evaluation/workbench/evo_vio_tcp"
 DEFAULT_HAND_EYE = REPO_ROOT / "data/calibration/handeye_0615/handeye_result.yaml"
 
-T_TCP_LEFT_CAMERA = np.array(
+T_TCP_CAMERA_DEFAULT = np.array(
     [
         [0.854672738, -0.422689316, 0.301443615, 0.020087823],
         [0.519166541, 0.694970001, -0.497476432, -0.097333617],
@@ -60,7 +60,7 @@ T_TCP_LEFT_CAMERA = np.array(
     dtype=float,
 )
 
-T_LEFT_CAMERA_IMU = np.array(
+T_CAMERA_IMU_DEFAULT = np.array(
     [
         [-0.999638319, 0.0265241228, -0.00445450377, -0.0022427286],
         [-0.0265235156, -0.999648213, -0.000195318818, 0.0140962508],
@@ -97,9 +97,9 @@ def load_helpers() -> Dict[str, object]:
     return runpy.run_path(str(EVAL_HELPERS), run_name="__vio_tcp_camera_eval__")
 
 
-def load_tcp_left_camera_transform(path: Path | None) -> np.ndarray:
+def load_tcp_camera_transform(path: Path | None) -> np.ndarray:
     if path is None:
-        return T_TCP_LEFT_CAMERA.copy()
+        return T_TCP_CAMERA_DEFAULT.copy()
     if yaml is None:
         raise RuntimeError("PyYAML is required for --handeye-yaml")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -107,6 +107,22 @@ def load_tcp_left_camera_transform(path: Path | None) -> np.ndarray:
     if matrix.shape != (4, 4):
         raise ValueError(f"{path}: result.T_cam_to_gripper must be 4x4")
     return matrix
+
+
+def load_camera_imu_transform(calibration_json: Path | None, camera_rig: str | None) -> Tuple[np.ndarray, str, str]:
+    if calibration_json is None:
+        return T_CAMERA_IMU_DEFAULT.copy(), "built-in default", "cam0"
+
+    data = json.loads(calibration_json.read_text(encoding="utf-8"))
+    if camera_rig is None:
+        raise ValueError("--camera-rig is required when --calibration-json is used")
+    try:
+        matrix = np.asarray(data["observation"]["images"][camera_rig]["extrinsics"]["T_ic_cam0_to_imu0"], dtype=float)
+    except KeyError as exc:
+        raise KeyError(f"{calibration_json}: missing observation.images.{camera_rig}.extrinsics.T_ic_cam0_to_imu0") from exc
+    if matrix.shape != (4, 4):
+        raise ValueError(f"{calibration_json}: {camera_rig} T_ic_cam0_to_imu0 must be 4x4")
+    return matrix, f"{calibration_json}::{camera_rig}.cam0", f"{camera_rig}.cam0"
 
 
 def _pose_position_xyz(sample: dict) -> List[float]:
@@ -172,11 +188,12 @@ def first_existing(row: dict, names: Sequence[str]) -> Optional[str]:
 def load_vio_tcp_trajectory(
     path: Path,
     helpers: Dict[str, object],
-    t_tcp_left_camera: np.ndarray,
+    t_tcp_camera: np.ndarray,
+    t_camera_imu: np.ndarray,
     estimate_frame: str,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    t_imu_left_camera = np.linalg.inv(T_LEFT_CAMERA_IMU)
-    t_left_camera_tcp = np.linalg.inv(t_tcp_left_camera)
+    t_imu_camera = np.linalg.inv(t_camera_imu)
+    t_camera_tcp = np.linalg.inv(t_tcp_camera)
     times: List[float] = []
     poses: List[np.ndarray] = []
     with path.open("r", newline="", encoding="utf-8") as handle:
@@ -197,13 +214,13 @@ def load_vio_tcp_trajectory(
             t_world_estimate = helpers["transform_from_pose"]([float(v) for v in xyz], [float(v) for v in quat])
             if estimate_frame == "imu":
                 t_world_imu = t_world_estimate
-                t_world_tcp = t_world_imu @ t_imu_left_camera @ t_left_camera_tcp
+                t_world_tcp = t_world_imu @ t_imu_camera @ t_camera_tcp
             elif estimate_frame == "vins_base_link":
                 t_world_imu = t_world_estimate @ T_VINS_BASE_LINK_IMU
-                t_world_tcp = t_world_imu @ t_imu_left_camera @ t_left_camera_tcp
+                t_world_tcp = t_world_imu @ t_imu_camera @ t_camera_tcp
             elif estimate_frame == "camera":
-                t_world_left_camera = t_world_estimate
-                t_world_tcp = t_world_left_camera @ t_left_camera_tcp
+                t_world_camera = t_world_estimate
+                t_world_tcp = t_world_camera @ t_camera_tcp
             else:
                 raise ValueError(f"unsupported estimate frame {estimate_frame}")
             times.append(normalize_timestamp(float(ts)))
@@ -441,8 +458,10 @@ def main() -> int:
         "--handeye-yaml",
         type=Path,
         default=DEFAULT_HAND_EYE,
-        help="hand-eye YAML. result.T_cam_to_gripper is used as T_tcp_left_camera for this TCP-chain check.",
+        help="hand-eye YAML. result.T_cam_to_gripper is used as T_tcp_camera for this TCP-chain check.",
     )
+    parser.add_argument("--calibration-json", type=Path, default=None, help="Episode calibration.json used to resolve rig-specific cam0->imu0 extrinsics")
+    parser.add_argument("--camera-rig", type=str, default=None, help="Rig key under calibration observation.images, e.g. stereo_right")
     parser.add_argument(
         "--estimate-frame",
         choices=["imu", "vins_base_link", "camera"],
@@ -479,12 +498,15 @@ def main() -> int:
     log_dir.mkdir(exist_ok=True)
 
     helpers = load_helpers()
-    t_tcp_left_camera = load_tcp_left_camera_transform(args.handeye_yaml.expanduser().resolve() if args.handeye_yaml else None)
+    t_tcp_camera = load_tcp_camera_transform(args.handeye_yaml.expanduser().resolve() if args.handeye_yaml else None)
+    calibration_json = args.calibration_json.expanduser().resolve() if args.calibration_json else None
+    t_camera_imu, camera_imu_source, camera_label = load_camera_imu_transform(calibration_json, args.camera_rig)
     gt_times, gt_pos_all, gt_rot_all = load_robot_tcp_trajectory(gt_path, helpers)
     est_times, est_pos_all, est_rot_all = load_vio_tcp_trajectory(
         estimate_path,
         helpers,
-        t_tcp_left_camera,
+        t_tcp_camera,
+        t_camera_imu,
         args.estimate_frame,
     )
     auto_time_offset: Optional[Dict[str, object]] = None
@@ -549,7 +571,7 @@ def main() -> int:
     associated_duration_s = float(times[-1] - times[0]) if times.size > 1 else 0.0
 
     gt_tum = output_dir / "gt_tcp.tum"
-    est_tum = output_dir / "vio_tcp_from_imu_left_camera.tum"
+    est_tum = output_dir / "vio_tcp_from_imu_cam0.tum"
     gt_matched_tum = output_dir / "gt_tcp_matched.tum"
     est_matched_tum = output_dir / "vio_tcp_matched.tum"
     if args.time_association == "interpolate":
@@ -635,12 +657,16 @@ def main() -> int:
         "evo_commands": command_texts,
         "internal_se3": internal,
         "transforms": {
-            "T_tcp_left_camera": t_tcp_left_camera.tolist(),
-            "T_left_camera_imu": T_LEFT_CAMERA_IMU.tolist(),
-            "T_imu_left_camera": np.linalg.inv(T_LEFT_CAMERA_IMU).tolist(),
-            "T_left_camera_tcp": np.linalg.inv(t_tcp_left_camera).tolist(),
+            "T_tcp_camera": t_tcp_camera.tolist(),
+            "T_camera_imu": t_camera_imu.tolist(),
+            "T_imu_camera": np.linalg.inv(t_camera_imu).tolist(),
+            "T_camera_tcp": np.linalg.inv(t_tcp_camera).tolist(),
             "T_vins_base_link_imu": T_VINS_BASE_LINK_IMU.tolist(),
         },
+        "camera_label": camera_label,
+        "camera_imu_source": camera_imu_source,
+        "camera_rig": args.camera_rig or "",
+        "calibration_json": str(calibration_json) if calibration_json else "",
         "estimate_frame": args.estimate_frame,
         "time_association": args.time_association,
         "time_offset_sec": args.time_offset_sec,
@@ -683,8 +709,8 @@ def main() -> int:
         handle.write(f"- Matched estimated TUM: `{est_matched_tum}`\n\n")
         handle.write("## Coordinate Chain\n\n")
         if args.estimate_frame == "camera":
-            handle.write("The VIO CSV stores the left/cam0 camera pose in the VINS world frame:\n\n")
-            handle.write("```text\nT_world_left_camera\n```\n\n")
+            handle.write(f"The VIO CSV stores the `{camera_label}` pose in the VINS world frame:\n\n")
+            handle.write("```text\nT_world_camera\n```\n\n")
         elif args.estimate_frame == "imu":
             handle.write("The VIO CSV stores the IMU pose in the VINS world frame:\n\n")
             handle.write("```text\nT_world_imu\n```\n\n")
@@ -693,13 +719,16 @@ def main() -> int:
             handle.write("```text\nT_world_imu = T_world_base_link @ T_base_link_imu\n```\n\n")
         handle.write("The robot JSON stores the TCP pose in the robot base frame:\n\n")
         handle.write("```text\nT_base_tcp\n```\n\n")
-        handle.write("The hand-eye calibration is used as `T_tcp_left_camera`, with `tcp` as parent and `left_camera` as child:\n\n")
-        handle.write("```text\nT_tcp_left_camera =\n")
-        handle.write(matrix_text(t_tcp_left_camera))
+        handle.write(f"The hand-eye calibration is used as `T_tcp_camera`, with `tcp` as parent and `{camera_label}` as child:\n\n")
+        handle.write("```text\nT_tcp_camera =\n")
+        handle.write(matrix_text(t_tcp_camera))
         handle.write("\n```\n\n")
-        handle.write("The camera-IMU extrinsic is used as `T_left_camera_imu`, with `left_camera` as parent and `imu` as child:\n\n")
-        handle.write("```text\nT_left_camera_imu =\n")
-        handle.write(matrix_text(T_LEFT_CAMERA_IMU))
+        handle.write(
+            f"The camera-IMU extrinsic is used as `T_camera_imu`, with `{camera_label}` as parent and `imu` as child.\n"
+            f"Source: `{camera_imu_source}`\n\n"
+        )
+        handle.write("```text\nT_camera_imu =\n")
+        handle.write(matrix_text(t_camera_imu))
         handle.write("\n```\n\n")
         if args.estimate_frame == "vins_base_link":
             handle.write("The VINS-Fusion `base_link` to IMU transform is:\n\n")
@@ -709,13 +738,13 @@ def main() -> int:
         handle.write("Therefore the VIO-derived TCP trajectory is:\n\n")
         handle.write("```text\n")
         if args.estimate_frame == "camera":
-            handle.write("T_world_tcp         = T_world_left_camera @ inverse(T_tcp_left_camera)\n")
+            handle.write("T_world_tcp     = T_world_camera @ inverse(T_tcp_camera)\n")
         else:
             if args.estimate_frame == "vins_base_link":
-                handle.write("T_world_imu         = T_world_base_link @ T_base_link_imu\n")
-            handle.write("T_world_left_camera = T_world_imu @ inverse(T_left_camera_imu)\n")
-            handle.write("T_world_tcp         = T_world_left_camera @ inverse(T_tcp_left_camera)\n")
-            handle.write("                    = T_world_imu @ inverse(T_left_camera_imu) @ inverse(T_tcp_left_camera)\n")
+                handle.write("T_world_imu     = T_world_base_link @ T_base_link_imu\n")
+            handle.write("T_world_camera  = T_world_imu @ inverse(T_camera_imu)\n")
+            handle.write("T_world_tcp     = T_world_camera @ inverse(T_tcp_camera)\n")
+            handle.write("                = T_world_imu @ inverse(T_camera_imu) @ inverse(T_tcp_camera)\n")
         handle.write("```\n\n")
         handle.write("The robot TCP trajectory is already:\n\n")
         handle.write("```text\nT_base_tcp\n```\n\n")

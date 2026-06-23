@@ -136,12 +136,33 @@ def load_robot_tcp_trajectory(
     times: List[float] = []
     poses: List[np.ndarray] = []
     for sample in samples:
-        pose = helpers["transform_from_pose"](sample["position_m"], sample["quaternion_xyzw"])
+        position = sample.get("position_m", sample.get("position"))
+        if isinstance(position, dict):
+            position = [position["x"], position["y"], position["z"]]
+        if position is None:
+            raise KeyError("position_m")
+
+        if "quaternion_xyzw" in sample:
+            quaternion = sample["quaternion_xyzw"]
+        elif "quaternion_wxyz" in sample:
+            q = sample["quaternion_wxyz"]
+            quaternion = [q["x"], q["y"], q["z"], q["w"]] if isinstance(q, dict) else [q[1], q[2], q[3], q[0]]
+        elif "quaternion" in sample:
+            q = sample["quaternion"]
+            quaternion = [q["x"], q["y"], q["z"], q["w"]] if isinstance(q, dict) else q
+        else:
+            raise KeyError("quaternion_xyzw")
+
+        pose = helpers["transform_from_pose"](position, quaternion)
         if pose_direction == "gripper_to_base":
             pose = invert_transform(pose)
         elif pose_direction != "base_to_gripper":
             raise ValueError(f"unsupported pose direction {pose_direction}")
-        times.append(normalize_timestamp(float(sample["timestamp"])))
+
+        timestamp = sample.get("timestamp", sample.get("timestamp_s", sample.get("timestamp_us")))
+        if timestamp is None:
+            raise KeyError("timestamp")
+        times.append(normalize_timestamp(float(timestamp)))
         poses.append(pose)
     order = np.argsort(np.asarray(times, dtype=float))
     poses_arr = np.asarray(poses, dtype=float)[order]
