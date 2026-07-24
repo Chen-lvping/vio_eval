@@ -1,0 +1,58 @@
+diff --git a/.gitignore b/.gitignore
+index 7227515..0fd01d2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -66,6 +66,7 @@ Thirdparty/g2o/config.h
+ Thirdparty/g2o/lib/
+ Vocabulary/ORBvoc.txt
+ build/
++build_clean/
+ 
+ lib/
+ 
+diff --git a/Examples/Stereo-Inertial/stereo_inertial_euroc.cc b/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
+index bb52223..79ea1f5 100644
+--- a/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
++++ b/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
+@@ -167,7 +167,7 @@ int main(int argc, char **argv)
+             vImuMeas.clear();
+ 
+             if(ni>0)
+-                while(vTimestampsImu[seq][first_imu[seq]]<=vTimestampsCam[seq][ni]) // while(vTimestampsImu[first_imu]<=vTimestampsCam[ni])
++                while(first_imu[seq] < nImu[seq] && vTimestampsImu[seq][first_imu[seq]]<=vTimestampsCam[seq][ni]) // while(vTimestampsImu[first_imu]<=vTimestampsCam[ni])
+                 {
+                     vImuMeas.push_back(ORB_SLAM3::IMU::Point(vAcc[seq][first_imu[seq]].x,vAcc[seq][first_imu[seq]].y,vAcc[seq][first_imu[seq]].z,
+                                                              vGyro[seq][first_imu[seq]].x,vGyro[seq][first_imu[seq]].y,vGyro[seq][first_imu[seq]].z,
+diff --git a/src/System.cc b/src/System.cc
+index 60d9c51..dafb4cb 100644
+--- a/src/System.cc
++++ b/src/System.cc
+@@ -1546,4 +1546,3 @@ string System::CalculateCheckSum(string filename, int type)
+ }
+ 
+ } //namespace ORB_SLAM
+-
+diff --git a/src/Tracking.cc b/src/Tracking.cc
+index 5191451..60f4e90 100644
+--- a/src/Tracking.cc
++++ b/src/Tracking.cc
+@@ -604,7 +604,8 @@ void Tracking::newParameterLoader(Settings *settings) {
+     Sophus::SE3f Tbc = settings->Tbc();
+     mInsertKFsLost = settings->insertKFsWhenLost();
+     mImuFreq = settings->imuFrequency();
+-    mImuPer = 0.001; //1.0 / (double) mImuFreq;     //TODO: ESTO ESTA BIEN?
++    // Use the configured IMU frequency instead of a fixed 1 ms period.
++    mImuPer = 1.0 / (double) mImuFreq;
+     float Ng = settings->noiseGyro();
+     float Na = settings->noiseAcc();
+     float Ngw = settings->gyroWalk();
+@@ -1341,7 +1342,8 @@ bool Tracking::ParseIMUParamFile(cv::FileStorage &fSettings)
+     if(!node.empty() && node.isInt())
+     {
+         mImuFreq = node.operator int();
+-        mImuPer = 0.001; //1.0 / (double) mImuFreq;
++        // Keep frame/IMU association consistent with the configured IMU rate.
++        mImuPer = 1.0 / (double) mImuFreq;
+     }
+     else
+     {

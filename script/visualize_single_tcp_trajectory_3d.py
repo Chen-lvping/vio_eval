@@ -15,7 +15,7 @@ import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-COMPARISON_VIEWER = REPO_ROOT / "script/visualize_tcp_trajectory_comparison.py"
+COMPARISON_VIEWER = REPO_ROOT / "script/visualize/visualize_tcp_trajectory_comparison.py"
 DEFAULT_EVAL_DIR = REPO_ROOT / "data/evaluation/workbench/evo_vio_tcp_cam0_0617_0004"
 
 
@@ -166,7 +166,7 @@ def single_viewer_html(comparison_html: str, episode_label: str) -> str:
         "TCP trajectory comparison: robot GT vs VINS / DynaVINS": f"{episode_label} TCP 3D visualization",
         "<span><i class=\"dot\" style=\"background:var(--vins)\"></i>VINS-derived TCP</span>": "<span><i class=\"dot\" style=\"background:var(--vins)\"></i>VIO-derived TCP</span>",
         "      <span><i class=\"dot\" style=\"background:var(--dynavins)\"></i>DynaVINS-derived TCP</span>\n": "",
-        "TCP comparison. VIO chain: T_world_tcp = T_world_imu @ inv(T_left_camera_imu) @ inv(T_tcp_left_camera).": f"{episode_label}: robot TCP GT vs VIO-derived TCP. Drag the 3D view to rotate; wheel to zoom.",
+        "TCP comparison. Default 3D view follows the dominant motion direction; VIO chain: T_world_tcp = T_world_imu @ inv(T_left_camera_imu) @ inv(T_tcp_left_camera).": f"{episode_label}: robot TCP GT vs VIO-derived TCP. Default 3D view follows the dominant motion direction; drag to rotate; wheel to zoom.",
     }
     html = comparison_html
     for old, new in replacements.items():
@@ -192,7 +192,7 @@ def main() -> int:
     comparison = load_comparison_module()
     algorithm, sources = make_algorithm(eval_dir, args.max_points, comparison)
     payload = {
-        "subtitle": f"{episode_label}: robot TCP GT vs VIO-derived TCP. Drag the 3D view to rotate; wheel to zoom.",
+        "subtitle": f"{episode_label}: robot TCP GT vs VIO-derived TCP. Default 3D view follows the dominant motion direction; drag to rotate; wheel to zoom.",
         "inputs": {
             "eval_dir": str(eval_dir),
             "gt_tum": sources["gt_tum"],

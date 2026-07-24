@@ -1,0 +1,11 @@
+Examples/Stereo-Inertial/stereo_inertial_euroc.cc
+Examples/Stereo/stereo_euroc_offline.cc
+include/Optimizer.h
+include/System.h
+include/Tracking.h
+scripts/run_fays_orbslam3_stereo_right.py
+scripts/run_orbslam3_offline_ba_smooth.sh
+src/ORBmatcher.cc
+src/Optimizer.cc
+src/System.cc
+src/Tracking.cc

@@ -641,7 +641,14 @@ def main() -> int:
     command_texts: Dict[str, str] = {}
     for name, command in commands:
         command_texts[name] = evo_command_text(command)
-        outputs[name] = run_cmd(command, log_dir / f"{name}.log")
+        try:
+            outputs[name] = run_cmd(command, log_dir / f"{name}.log")
+        except RuntimeError:
+            if name.startswith("rpe_"):
+                print(f"[WARNING] RPE skipped ({name})", flush=True)
+                outputs[name] = "[skipped]"
+                continue
+            raise
 
     internal = compute_internal_se3_metrics(gt_pos, gt_rot, est_pos, est_rot, times, helpers)
     payload = {

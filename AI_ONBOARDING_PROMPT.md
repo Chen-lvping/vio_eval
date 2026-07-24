@@ -14,20 +14,20 @@
 4. 做轨迹、姿态误差、对齐结果的可视化与诊断
 
 项目结构：
-- `script/`：主脚本目录
+- `script/`：主脚本目录，内部已经按 `capture/`、`diagnose/`、`eval/`、`experiments/`、`postprocess/`、`scan/`、`visualize/` 分组
 - `data/`：标定输入、轨迹样本、评估结果、可视化输出
 - `README.md`：项目概览
 
 请你先做这些事，再开始回答我后续问题：
 1. 先阅读 `README.md`
 2. 再阅读这些核心脚本，理解职责和输入输出：
-   - `script/capture_static_pose.py`
+   - `script/capture/capture_static_pose.py`
    - `script/handeye_calibrate_aprilgrid.py`
    - `script/record_trajectory.py`
    - `script/evaluate_vins_accuracy.py`
    - `script/evaluate_vio_tcp_camera_evo.py`
-   - `script/diagnose_tcp_orientation.py`
-   - `script/visualize_tcp_trajectory_comparison.py`
+   - `script/diagnose/diagnose_tcp_orientation.py`
+   - `script/visualize/visualize_tcp_trajectory_comparison.py`
 3. 再浏览这些关键数据目录：
    - `data/handeye_0615`
    - `data/static_pose_samples_0615`

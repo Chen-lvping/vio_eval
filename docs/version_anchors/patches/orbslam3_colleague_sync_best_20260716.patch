@@ -1,0 +1,846 @@
+diff --git a/Examples/Stereo-Inertial/stereo_inertial_euroc.cc b/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
+index bb52223..79ea1f5 100644
+--- a/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
++++ b/Examples/Stereo-Inertial/stereo_inertial_euroc.cc
+@@ -167,7 +167,7 @@ int main(int argc, char **argv)
+             vImuMeas.clear();
+ 
+             if(ni>0)
+-                while(vTimestampsImu[seq][first_imu[seq]]<=vTimestampsCam[seq][ni]) // while(vTimestampsImu[first_imu]<=vTimestampsCam[ni])
++                while(first_imu[seq] < nImu[seq] && vTimestampsImu[seq][first_imu[seq]]<=vTimestampsCam[seq][ni]) // while(vTimestampsImu[first_imu]<=vTimestampsCam[ni])
+                 {
+                     vImuMeas.push_back(ORB_SLAM3::IMU::Point(vAcc[seq][first_imu[seq]].x,vAcc[seq][first_imu[seq]].y,vAcc[seq][first_imu[seq]].z,
+                                                              vGyro[seq][first_imu[seq]].x,vGyro[seq][first_imu[seq]].y,vGyro[seq][first_imu[seq]].z,
+diff --git a/Examples/Stereo/stereo_euroc_offline.cc b/Examples/Stereo/stereo_euroc_offline.cc
+index 29bedf6..c9f9af9 100644
+--- a/Examples/Stereo/stereo_euroc_offline.cc
++++ b/Examples/Stereo/stereo_euroc_offline.cc
+@@ -34,7 +34,8 @@ int main(int argc, char **argv)
+         cerr << endl
+              << "Usage: ./stereo_euroc_offline path_to_vocabulary path_to_settings "
+              << "path_to_sequence_folder path_to_times_file trajectory_file_name "
+-             << "[gba_iterations=30] [gba_robust=0] [local_mapping_wait_timeout_s=10]" << endl;
++             << "[gba_iterations=30] [gba_robust=0] [local_mapping_wait_timeout_s=10] "
++             << "[full_frame_ba_iterations=0]" << endl;
+         return 1;
+     }
+ 
+@@ -46,6 +47,7 @@ int main(int argc, char **argv)
+     const int gba_iterations = argc > 6 ? atoi(argv[6]) : 30;
+     const bool gba_robust = argc > 7 ? atoi(argv[7]) != 0 : false;
+     const double wait_timeout_s = argc > 8 ? atof(argv[8]) : 10.0;
++    const int full_frame_ba_iterations = argc > 9 ? atoi(argv[9]) : 0;
+ 
+     vector<string> vstrImageLeft;
+     vector<string> vstrImageRight;
+@@ -68,7 +70,8 @@ int main(int argc, char **argv)
+     cout << "[Offline] images=" << nImages
+          << ", gba_iterations=" << gba_iterations
+          << ", gba_robust=" << gba_robust
+-         << ", local_mapping_wait_timeout_s=" << wait_timeout_s << endl;
++         << ", local_mapping_wait_timeout_s=" << wait_timeout_s
++         << ", full_frame_ba_iterations=" << full_frame_ba_iterations << endl;
+ 
+     ORB_SLAM3::System SLAM(vocabulary_path, settings_path, ORB_SLAM3::System::STEREO, false);
+ 
+@@ -107,6 +110,10 @@ int main(int argc, char **argv)
+ 
+     const string kf_file = "kf_" + file_name + ".txt";
+     const string f_file = "f_" + file_name + ".txt";
++    if(full_frame_ba_iterations > 0)
++    {
++        SLAM.RunFullFrameBundleAdjustment(full_frame_ba_iterations, true);
++    }
+     SLAM.SaveTrajectoryEuRoC(f_file);
+     SLAM.SaveKeyFrameTrajectoryEuRoC(kf_file);
+ 
+diff --git a/include/Optimizer.h b/include/Optimizer.h
+index 5013f9b..61b04ba 100644
+--- a/include/Optimizer.h
++++ b/include/Optimizer.h
+@@ -52,6 +52,8 @@ public:
+                                  const bool bRobust = true);
+     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
+                                        const unsigned long nLoopKF=0, const bool bRobust = true);
++    int static FullFrameBundleAdjustment(std::vector<Frame*> &vpFrames, int nIterations=10,
++                                         const bool bRobust = true, const int minObservations = 2);
+     void static FullInertialBA(Map *pMap, int its, const bool bFixLocal=false, const unsigned long nLoopKF=0, bool *pbStopFlag=NULL, bool bInit=false, float priorG = 1e2, float priorA=1e6, Eigen::VectorXd *vSingVal = NULL, bool *bHess=NULL);
+ 
+     void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag, Map *pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges);
+diff --git a/include/System.h b/include/System.h
+index c4fc231..329578a 100644
+--- a/include/System.h
++++ b/include/System.h
+@@ -142,6 +142,8 @@ public:
+ 
+     bool WaitForLocalMappingIdle(const double timeout_s);
+     bool RunGlobalBundleAdjustment(const int nIterations = 10, const bool bRobust = false);
++    bool RunFullFrameBundleAdjustment(const int nIterations = 10, const bool bRobust = true);
++    void SaveFullFrameBATrajectoryEuRoC(const string &filename);
+ 
+     // Save camera trajectory in the TUM RGB-D dataset format.
+     // Only for stereo and RGB-D. This method does not work for monocular.
+diff --git a/include/Tracking.h b/include/Tracking.h
+index e4ee1e9..6276218 100644
+--- a/include/Tracking.h
++++ b/include/Tracking.h
+@@ -153,6 +153,7 @@ public:
+     list<KeyFrame*> mlpReferences;
+     list<double> mlFrameTimes;
+     list<bool> mlbLost;
++    list<Frame> mlFullFrameBAFrames;
+ 
+     // frames with estimated pose
+     int mTrackedFr;
+diff --git a/scripts/run_fays_orbslam3_stereo_right.py b/scripts/run_fays_orbslam3_stereo_right.py
+index a758c40..7e36208 100755
+--- a/scripts/run_fays_orbslam3_stereo_right.py
++++ b/scripts/run_fays_orbslam3_stereo_right.py
+@@ -85,6 +85,7 @@ def parse_args() -> argparse.Namespace:
+     parser.add_argument("--vocabulary", type=Path, default=REPO_ROOT / "Vocabulary/ORBvoc.txt")
+     parser.add_argument("--trajectory-name", default="orbslam3_stereo_right")
+     parser.add_argument("--max-frames", type=int, default=0, help="Debug limit; 0 means all frames.")
++    parser.add_argument("--start-time-offset-sec", type=float, default=0.0, help="Skip camera frames before this offset from the first selected frame.")
+     parser.add_argument("--cam-time-offset-sec", type=float, default=0.0)
+     parser.add_argument("--prepare-only", action="store_true")
+     parser.add_argument("--skip-prepare", action="store_true")
+@@ -101,6 +102,7 @@ def parse_args() -> argparse.Namespace:
+     parser.add_argument("--imu-gyro-walk", type=float)
+     parser.add_argument("--imu-acc-walk", type=float)
+     parser.add_argument("--imu-frequency", type=float)
++    parser.add_argument("--imu-convert-discrete-noise", action="store_true", help="Treat calibration noise_density_discrete as per-sample noise and convert it to continuous density before writing ORB-SLAM3 YAML.")
+     parser.add_argument("--orb-features", type=int, default=1200)
+     parser.add_argument("--orb-scale-factor", type=float, default=1.2)
+     parser.add_argument("--orb-levels", type=int, default=8)
+@@ -112,6 +114,7 @@ def parse_args() -> argparse.Namespace:
+     parser.add_argument("--offline-close-point-limit", type=int, default=0)
+     parser.add_argument("--offline-disable-kf-culling", action="store_true")
+     parser.add_argument("--offline-wait-timeout", type=float, default=10.0)
++    parser.add_argument("--full-frame-ba-iterations", type=int, default=0, help="Run ORB-SLAM3 internal full-frame visual BA after GBA in offline accurate mode.")
+     return parser.parse_args()
+ 
+ 
+@@ -238,10 +241,13 @@ def video_frame_count(mkv_file: Path) -> int:
+     return count
+ 
+ 
+-def select_video_frames(mkv_file: Path, camera_timestamps: Dict[int, int], imu_records: Sequence[ImuRecord], max_frames: int) -> List[Tuple[int, int]]:
++def select_video_frames(mkv_file: Path, camera_timestamps: Dict[int, int], imu_records: Sequence[ImuRecord], max_frames: int, start_time_offset_s: float = 0.0) -> List[Tuple[int, int]]:
+     total_frames = video_frame_count(mkv_file)
+     imu_start, imu_end = imu_records[0].timestamp_ns, imu_records[-1].timestamp_ns
+     selected = [(idx, ts) for idx, ts in sorted(camera_timestamps.items()) if 0 <= idx < total_frames and imu_start <= ts <= imu_end]
++    if selected and start_time_offset_s > 0.0:
++        cutoff_ns = selected[0][1] + int(round(start_time_offset_s * 1_000_000_000))
++        selected = [(idx, ts) for idx, ts in selected if ts >= cutoff_ns]
+     if max_frames > 0:
+         selected = selected[:max_frames]
+     if not selected:
+@@ -370,10 +376,16 @@ def median_imu_frequency(imu_records: Sequence[ImuRecord]) -> float:
+     return float(round(1.0 / float(np.median(deltas)), 3)) if deltas.size else 200.0
+ 
+ 
+-def imu_noise(cli_value: Optional[float], imu: Dict[str, Any], sensor: str, key: str, fallback: float) -> float:
++def imu_noise(cli_value: Optional[float], imu: Dict[str, Any], sensor: str, key: str, fallback: float, sample_rate_hz: Optional[float] = None, convert_discrete: bool = False) -> float:
+     if cli_value is not None:
+         return float(cli_value)
+-    return float(imu.get(sensor, {}).get(key, fallback))
++    sensor_config = imu.get(sensor, {})
++    if key not in sensor_config:
++        return float(fallback)
++    value = float(sensor_config[key])
++    if convert_discrete and key.endswith("_discrete") and sample_rate_hz and sample_rate_hz > 0.0:
++        return value / math.sqrt(sample_rate_hz)
++    return value
+ 
+ 
+ def generate_settings_yaml(path: Path, calibration_json: Path, camera_key: str, imu_key: Optional[str], imu_records: Sequence[ImuRecord], args: argparse.Namespace, overwrite: bool) -> None:
+@@ -391,7 +403,6 @@ def generate_settings_yaml(path: Path, calibration_json: Path, camera_key: str,
+     t_cam0_imu = matrix_from_json(ext["T_ic_cam0_to_imu0"], "T_ic_cam0_to_imu0")
+     t_cam1_imu = matrix_from_json(ext["T_ic_cam1_to_imu0"], "T_ic_cam1_to_imu0")
+     t_cam0_cam1 = t_cam0_imu.dot(invert_transform(t_cam1_imu))
+-    t_imu_cam0 = invert_transform(t_cam0_imu)
+     imu_freq = args.imu_frequency or median_imu_frequency(imu_records)
+     system_lines = []
+     if args.offline_max_kf_frames > 0:
+@@ -434,9 +445,9 @@ Camera.height: {height}
+ Camera.fps: {int(round(float(stereo.get('fps', 25.0))))}
+ Camera.RGB: 1
+ Stereo.ThDepth: 40.0
+-{yaml_matrix('IMU.T_b_c1', t_imu_cam0)}
+-IMU.NoiseGyro: {imu_noise(args.imu_noise_gyro, imu, 'gyroscope', 'noise_density_discrete', 0.00016):.12g}
+-IMU.NoiseAcc: {imu_noise(args.imu_noise_acc, imu, 'accelerometer', 'noise_density_discrete', 0.0028):.12g}
++{yaml_matrix('IMU.T_b_c1', t_cam0_imu)}
++IMU.NoiseGyro: {imu_noise(args.imu_noise_gyro, imu, 'gyroscope', 'noise_density_discrete', 0.00016, imu_freq, args.imu_convert_discrete_noise):.12g}
++IMU.NoiseAcc: {imu_noise(args.imu_noise_acc, imu, 'accelerometer', 'noise_density_discrete', 0.0028, imu_freq, args.imu_convert_discrete_noise):.12g}
+ IMU.GyroWalk: {imu_noise(args.imu_gyro_walk, imu, 'gyroscope', 'random_walk', 0.000022):.12g}
+ IMU.AccWalk: {imu_noise(args.imu_acc_walk, imu, 'accelerometer', 'random_walk', 0.00086):.12g}
+ IMU.Frequency: {float(imu_freq):.12g}
+@@ -467,7 +478,7 @@ def prepare_dataset(paths: PipelinePaths, args: argparse.Namespace) -> None:
+         require_file(path, label)
+     paths.work_dir.mkdir(parents=True, exist_ok=True)
+     camera_timestamps, imu_records = load_mcap_data(paths.mcap_file, args.mcap_camera_topic, args.mcap_imu_topic, args.cam_time_offset_sec)
+-    selected = select_video_frames(paths.mkv_file, camera_timestamps, imu_records, args.max_frames)
++    selected = select_video_frames(paths.mkv_file, camera_timestamps, imu_records, args.max_frames, args.start_time_offset_sec)
+     extract_stereo_images(paths.mkv_file, selected, paths.left_dir, paths.right_dir, args.overwrite)
+     write_timestamps_file(paths.timestamps_file, selected, args.overwrite)
+     filtered_imu = write_imu_csv(paths.imu_csv, imu_records, selected[-1][1], args.overwrite)
+@@ -491,7 +502,7 @@ def run_orbslam(paths: PipelinePaths, args: argparse.Namespace) -> None:
+     env["LD_LIBRARY_PATH"] = str(REPO_ROOT / "lib") + os.pathsep + env.get("LD_LIBRARY_PATH", "")
+     cmd = [str(binary), str(args.vocabulary), str(paths.settings_yaml), str(paths.sequence_dir), str(paths.timestamps_file), args.trajectory_name]
+     if args.offline_accurate:
+-        cmd.extend([str(args.gba_iterations), "0", str(args.offline_wait_timeout)])
++        cmd.extend([str(args.gba_iterations), "0", str(args.offline_wait_timeout), str(args.full_frame_ba_iterations)])
+     print("[ORB-SLAM3]", " ".join(cmd))
+     subprocess.run(cmd, cwd=str(paths.work_dir), env=env, check=True)
+     require_file(paths.raw_trajectory, "raw ORB-SLAM3 trajectory")
+@@ -819,6 +830,7 @@ def evaluate_trajectory(paths: PipelinePaths, args: argparse.Namespace) -> None:
+         "offline_max_kf_frames": args.offline_max_kf_frames,
+         "offline_close_point_limit": args.offline_close_point_limit,
+         "offline_disable_kf_culling": bool(args.offline_disable_kf_culling),
++        "full_frame_ba_iterations": args.full_frame_ba_iterations,
+     }
+     summary = {"inputs": {"estimated_csv": str(paths.output_csv), "robot_json": str(args.robot_json), "calibration_json": str(paths.calibration_json), "formula": formula, "pose_frame": pose_frame, "raw_trajectory": str(paths.raw_trajectory), "keyframe_trajectory": str(paths.keyframe_trajectory), "run_config": run_config}, "time_ranges": {"ref_start": robot_rows[0].timestamp_s, "ref_end": robot_rows[-1].timestamp_s, "est_start": est_tcp_rows[0].timestamp_s, "est_end": est_tcp_rows[-1].timestamp_s, "common_start": common_start, "common_end": common_end, "common_duration": max(0.0, common_end - common_start)}, "association": {"t_max_diff": args.t_max_diff, "pairs": len(pairs)}}
+     if len(pairs) < 3:
+diff --git a/scripts/run_orbslam3_offline_ba_smooth.sh b/scripts/run_orbslam3_offline_ba_smooth.sh
+index f210b87..b0d1e31 100755
+--- a/scripts/run_orbslam3_offline_ba_smooth.sh
++++ b/scripts/run_orbslam3_offline_ba_smooth.sh
+@@ -19,6 +19,7 @@ SKIP_ORBSLAM=0
+ SKIP_SMOOTH=0
+ 
+ GBA_ITERATIONS=100
++FULL_FRAME_BA_ITERATIONS=0
+ T_MAX_DIFF=0.01
+ POSITION_WINDOW=21
+ POSITION_POLY=2
+@@ -55,6 +56,7 @@ Options:
+   --smooth-csv PATH                  Final smoothed CSV output.
+   --trajectory-name NAME             ORB-SLAM3 trajectory name.
+   --gba-iterations N                 ORB-SLAM3 global BA iterations. Default: 100.
++  --full-frame-ba-iterations N       ORB-SLAM3 internal full-frame BA iterations. Default: 0.
+   --t-max-diff SEC                   Evaluation association threshold. Default: 0.01.
+   --position-window N                Savitzky-Golay position window. Default: 21.
+   --position-poly N                  Savitzky-Golay position polynomial. Default: 2.
+@@ -116,6 +118,10 @@ while [[ $# -gt 0 ]]; do
+       GBA_ITERATIONS="$2"
+       shift 2
+       ;;
++    --full-frame-ba-iterations)
++      FULL_FRAME_BA_ITERATIONS="$2"
++      shift 2
++      ;;
+     --t-max-diff)
+       T_MAX_DIFF="$2"
+       shift 2
+@@ -245,6 +251,7 @@ ORB_ARGS=(
+   --eval-dir "${WORK_DIR}/eval_raw_generation_unused"
+   --trajectory-name "${TRAJECTORY_NAME}"
+   --gba-iterations "${GBA_ITERATIONS}"
++  --full-frame-ba-iterations "${FULL_FRAME_BA_ITERATIONS}"
+   --orb-features "${ORB_FEATURES}"
+   --orb-init-fast "${ORB_INIT_FAST}"
+   --orb-min-fast "${ORB_MIN_FAST}"
+@@ -329,6 +336,7 @@ python3 scripts/run_fays_orbslam3_stereo_right.py \
+   --trajectory-name "${TRAJECTORY_NAME}" \
+   --offline-accurate \
+   --gba-iterations "${GBA_ITERATIONS}" \
++  --full-frame-ba-iterations "${FULL_FRAME_BA_ITERATIONS}" \
+   --t-max-diff "${T_MAX_DIFF}" \
+   2>&1 | tee "${LOG_DIR}/eval_raw_time_shifted.log"
+ 
+@@ -344,6 +352,7 @@ python3 scripts/run_fays_orbslam3_stereo_right.py \
+   --trajectory-name "${TRAJECTORY_NAME}" \
+   --offline-accurate \
+   --gba-iterations "${GBA_ITERATIONS}" \
++  --full-frame-ba-iterations "${FULL_FRAME_BA_ITERATIONS}" \
+   --t-max-diff "${T_MAX_DIFF}" \
+   2>&1 | tee "${LOG_DIR}/eval_smooth_time_shifted.log"
+ 
+diff --git a/src/ORBmatcher.cc b/src/ORBmatcher.cc
+index 16daa97..4044d8d 100644
+--- a/src/ORBmatcher.cc
++++ b/src/ORBmatcher.cc
+@@ -25,6 +25,7 @@
+ 
+ #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
+ 
++#include <cmath>
+ #include<stdint-gcc.h>
+ 
+ using namespace std;
+@@ -2197,6 +2198,9 @@ namespace ORB_SLAM3
+     {
+         int nmatches = 0;
+ 
++        if(!pKF || pKF->isBad() || !CurrentFrame.mpCamera)
++            return nmatches;
++
+         const Sophus::SE3f Tcw = CurrentFrame.GetPose();
+         Eigen::Vector3f Ow = Tcw.inverse().translation();
+ 
+@@ -2212,6 +2216,9 @@ namespace ORB_SLAM3
+         // Step 2 遍历关键帧中的每个地图点，通过相机投影模型，得到投影到当前帧的像素坐标
+         for(size_t i=0, iend=vpMPs.size(); i<iend; i++)
+         {
++            if(i >= pKF->mvKeysUn.size())
++                continue;
++
+             MapPoint* pMP = vpMPs[i];
+ 
+             if(pMP)
+@@ -2222,8 +2229,12 @@ namespace ORB_SLAM3
+                     //Project
+                     Eigen::Vector3f x3Dw = pMP->GetWorldPos();
+                     Eigen::Vector3f x3Dc = Tcw * x3Dw;
++                    if(x3Dc(2) <= 0.0f || !std::isfinite(x3Dc(2)))
++                        continue;
+ 
+                     const Eigen::Vector2f uv = CurrentFrame.mpCamera->project(x3Dc);
++                    if(!std::isfinite(uv(0)) || !std::isfinite(uv(1)))
++                        continue;
+ 
+                     if(uv(0)<CurrentFrame.mnMinX || uv(0)>CurrentFrame.mnMaxX)
+                         continue;
+@@ -2243,6 +2254,8 @@ namespace ORB_SLAM3
+ 
+                     //预测尺度
+                     int nPredictedLevel = pMP->PredictScale(dist3D,&CurrentFrame);
++                    if(nPredictedLevel < 0 || nPredictedLevel >= static_cast<int>(CurrentFrame.mvScaleFactors.size()))
++                        continue;
+ 
+                     // Search in a window
+                     // 搜索半径和尺度相关
+@@ -2255,6 +2268,8 @@ namespace ORB_SLAM3
+                         continue;
+ 
+                     const cv::Mat dMP = pMP->GetDescriptor();
++                    if(dMP.empty())
++                        continue;
+ 
+                     int bestDist = 256;
+                     int bestIdx2 = -1;
+@@ -2262,6 +2277,11 @@ namespace ORB_SLAM3
+                     for(vector<size_t>::const_iterator vit=vIndices2.begin(); vit!=vIndices2.end(); vit++)
+                     {
+                         const size_t i2 = *vit;
++                        if(i2 >= CurrentFrame.mvpMapPoints.size() ||
++                           i2 >= CurrentFrame.mvKeysUn.size() ||
++                           i2 >= static_cast<size_t>(CurrentFrame.mDescriptors.rows))
++                            continue;
++
+                         if(CurrentFrame.mvpMapPoints[i2])
+                             continue;
+ 
+@@ -2278,6 +2298,11 @@ namespace ORB_SLAM3
+ 
+                     if(bestDist<=ORBdist)
+                     {
++                        if(bestIdx2 < 0 ||
++                           bestIdx2 >= static_cast<int>(CurrentFrame.mvpMapPoints.size()) ||
++                           bestIdx2 >= static_cast<int>(CurrentFrame.mvKeysUn.size()))
++                            continue;
++
+                         CurrentFrame.mvpMapPoints[bestIdx2]=pMP;
+                         nmatches++;
+                         // Step 5 计算匹配点旋转角度差所在的直方图
+diff --git a/src/Optimizer.cc b/src/Optimizer.cc
+index 614a46a..39ca414 100644
+--- a/src/Optimizer.cc
++++ b/src/Optimizer.cc
+@@ -36,6 +36,7 @@
+ #include "Converter.h"
+ 
+ #include <mutex>
++#include <unordered_map>
+ 
+ #include "OptimizableTypes.h"
+ 
+@@ -2820,6 +2821,265 @@ void Optimizer::GlobalBundleAdjustemnt(Map *pMap, int nIterations, bool *pbStopF
+     BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust);
+ }
+ 
++int Optimizer::FullFrameBundleAdjustment(vector<Frame*> &vpFrames, int nIterations, const bool bRobust, const int minObservations)
++{
++    vector<Frame*> vpValidFrames;
++    vpValidFrames.reserve(vpFrames.size());
++    unordered_map<MapPoint*, int> mObsCount;
++    vector<pair<Frame*, int> > vSelectedObservations;
++    const int maxObsPerFramePerCamera = 30;
++
++    for(Frame* pFrame : vpFrames)
++    {
++        if(!pFrame || !pFrame->isSet())
++            continue;
++
++        int nLeftObs = 0;
++        int nRightObs = 0;
++        int nMonoObs = 0;
++        const int N = pFrame->N;
++        for(int i = 0; i < N; ++i)
++        {
++            MapPoint* pMP = pFrame->mvpMapPoints[i];
++            if(pMP && !pMP->isBad())
++            {
++                bool bUse = false;
++                if(pFrame->mpCamera2)
++                {
++                    if(i < pFrame->Nleft)
++                    {
++                        bUse = nLeftObs < maxObsPerFramePerCamera;
++                        if(bUse)
++                            ++nLeftObs;
++                    }
++                    else
++                    {
++                        bUse = nRightObs < maxObsPerFramePerCamera;
++                        if(bUse)
++                            ++nRightObs;
++                    }
++                }
++                else
++                {
++                    bUse = nMonoObs < (2 * maxObsPerFramePerCamera);
++                    if(bUse)
++                        ++nMonoObs;
++                }
++
++                if(bUse)
++                {
++                    vSelectedObservations.push_back(make_pair(pFrame, i));
++                    mObsCount[pMP]++;
++                }
++            }
++        }
++
++        if(nLeftObs + nRightObs + nMonoObs > 0)
++            vpValidFrames.push_back(pFrame);
++    }
++
++    if(vpValidFrames.size() < 2 || mObsCount.empty())
++        return 0;
++
++    g2o::SparseOptimizer optimizer;
++    g2o::BlockSolver_6_3::LinearSolverType *linearSolver = new g2o::LinearSolverEigen<g2o::BlockSolver_6_3::PoseMatrixType>();
++    g2o::BlockSolver_6_3 *solver_ptr = new g2o::BlockSolver_6_3(linearSolver);
++    g2o::OptimizationAlgorithmLevenberg *solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
++    optimizer.setAlgorithm(solver);
++    optimizer.setVerbose(false);
++
++    unordered_map<Frame*, int> mFrameVertexId;
++    mFrameVertexId.reserve(vpValidFrames.size());
++    for(size_t i = 0; i < vpValidFrames.size(); ++i)
++    {
++        Frame* pFrame = vpValidFrames[i];
++        g2o::VertexSE3Expmap *vSE3 = new g2o::VertexSE3Expmap();
++        Sophus::SE3<float> Tcw = pFrame->GetPose();
++        vSE3->setEstimate(g2o::SE3Quat(Tcw.unit_quaternion().cast<double>(), Tcw.translation().cast<double>()));
++        vSE3->setId(static_cast<int>(i));
++        vSE3->setFixed(i == 0);
++        optimizer.addVertex(vSE3);
++        mFrameVertexId[pFrame] = static_cast<int>(i);
++    }
++
++    unordered_map<MapPoint*, int> mPointVertexId;
++    mPointVertexId.reserve(mObsCount.size());
++    int nextVertexId = static_cast<int>(vpValidFrames.size());
++    {
++        unique_lock<mutex> lock(MapPoint::mGlobalMutex);
++        for(const auto &item : mObsCount)
++        {
++            MapPoint* pMP = item.first;
++            if(!pMP || pMP->isBad() || item.second < minObservations)
++                continue;
++
++            g2o::VertexSBAPointXYZ *vPoint = new g2o::VertexSBAPointXYZ();
++            vPoint->setEstimate(pMP->GetWorldPos().cast<double>());
++            vPoint->setId(nextVertexId);
++            vPoint->setMarginalized(true);
++            optimizer.addVertex(vPoint);
++            mPointVertexId[pMP] = nextVertexId++;
++        }
++    }
++
++    if(mPointVertexId.empty())
++        return 0;
++
++    const float thHuber2D = sqrt(5.991);
++    const float thHuber3D = sqrt(7.815);
++    int nEdges = 0;
++
++    for(const pair<Frame*, int> &frameObs : vSelectedObservations)
++    {
++        Frame* pFrame = frameObs.first;
++        const int i = frameObs.second;
++        const int frameVertexId = mFrameVertexId[pFrame];
++        MapPoint* pMP = pFrame->mvpMapPoints[i];
++        if(!pMP || pMP->isBad())
++            continue;
++
++        auto pointIt = mPointVertexId.find(pMP);
++        if(pointIt == mPointVertexId.end())
++            continue;
++
++        const int pointVertexId = pointIt->second;
++
++        if(!pFrame->mpCamera2)
++        {
++            if(pFrame->mvuRight[i] < 0)
++            {
++                const cv::KeyPoint &kpUn = pFrame->mvKeysUn[i];
++                Eigen::Matrix<double, 2, 1> obs;
++                obs << kpUn.pt.x, kpUn.pt.y;
++
++                ORB_SLAM3::EdgeSE3ProjectXYZ *e = new ORB_SLAM3::EdgeSE3ProjectXYZ();
++                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pointVertexId)));
++                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(frameVertexId)));
++                e->setMeasurement(obs);
++                e->setInformation(Eigen::Matrix2d::Identity() * pFrame->mvInvLevelSigma2[kpUn.octave]);
++                if(bRobust)
++                {
++                    g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
++                    e->setRobustKernel(rk);
++                    rk->setDelta(thHuber2D);
++                }
++                e->pCamera = pFrame->mpCamera;
++                optimizer.addEdge(e);
++                ++nEdges;
++            }
++            else
++            {
++                const cv::KeyPoint &kpUn = pFrame->mvKeysUn[i];
++                Eigen::Matrix<double, 3, 1> obs;
++                obs << kpUn.pt.x, kpUn.pt.y, pFrame->mvuRight[i];
++
++                g2o::EdgeStereoSE3ProjectXYZ *e = new g2o::EdgeStereoSE3ProjectXYZ();
++                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pointVertexId)));
++                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(frameVertexId)));
++                e->setMeasurement(obs);
++                e->setInformation(Eigen::Matrix3d::Identity() * pFrame->mvInvLevelSigma2[kpUn.octave]);
++                if(bRobust)
++                {
++                    g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
++                    e->setRobustKernel(rk);
++                    rk->setDelta(thHuber3D);
++                }
++                e->fx = pFrame->fx;
++                e->fy = pFrame->fy;
++                e->cx = pFrame->cx;
++                e->cy = pFrame->cy;
++                e->bf = pFrame->mbf;
++                optimizer.addEdge(e);
++                ++nEdges;
++            }
++        }
++        else
++        {
++            if(i < pFrame->Nleft)
++            {
++                const cv::KeyPoint &kp = pFrame->mvKeys[i];
++                Eigen::Matrix<double, 2, 1> obs;
++                obs << kp.pt.x, kp.pt.y;
++
++                ORB_SLAM3::EdgeSE3ProjectXYZ *e = new ORB_SLAM3::EdgeSE3ProjectXYZ();
++                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pointVertexId)));
++                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(frameVertexId)));
++                e->setMeasurement(obs);
++                e->setInformation(Eigen::Matrix2d::Identity() * pFrame->mvInvLevelSigma2[kp.octave]);
++                if(bRobust)
++                {
++                    g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
++                    e->setRobustKernel(rk);
++                    rk->setDelta(thHuber2D);
++                }
++                e->pCamera = pFrame->mpCamera;
++                optimizer.addEdge(e);
++                ++nEdges;
++            }
++            else
++            {
++                const int rightIndex = i - pFrame->Nleft;
++                if(rightIndex < 0 || rightIndex >= static_cast<int>(pFrame->mvKeysRight.size()))
++                    continue;
++
++                const cv::KeyPoint &kp = pFrame->mvKeysRight[rightIndex];
++                Eigen::Matrix<double, 2, 1> obs;
++                obs << kp.pt.x, kp.pt.y;
++
++                ORB_SLAM3::EdgeSE3ProjectXYZToBody *e = new ORB_SLAM3::EdgeSE3ProjectXYZToBody();
++                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pointVertexId)));
++                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(frameVertexId)));
++                e->setMeasurement(obs);
++                e->setInformation(Eigen::Matrix2d::Identity() * pFrame->mvInvLevelSigma2[kp.octave]);
++                if(bRobust)
++                {
++                    g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
++                    e->setRobustKernel(rk);
++                    rk->setDelta(thHuber2D);
++                }
++                Sophus::SE3f Trl = pFrame->GetRelativePoseTrl();
++                e->mTrl = g2o::SE3Quat(Trl.unit_quaternion().cast<double>(), Trl.translation().cast<double>());
++                e->pCamera = pFrame->mpCamera2;
++                optimizer.addEdge(e);
++                ++nEdges;
++            }
++        }
++    }
++
++    if(nEdges < 10)
++        return 0;
++
++    optimizer.initializeOptimization();
++    optimizer.optimize(nIterations);
++
++    for(Frame* pFrame : vpValidFrames)
++    {
++        const int vertexId = mFrameVertexId[pFrame];
++        g2o::VertexSE3Expmap *vSE3 = static_cast<g2o::VertexSE3Expmap *>(optimizer.vertex(vertexId));
++        if(!vSE3)
++            continue;
++        g2o::SE3Quat SE3quat = vSE3->estimate();
++        pFrame->SetPose(Sophus::SE3f(SE3quat.rotation().cast<float>(), SE3quat.translation().cast<float>()));
++    }
++
++    {
++        unique_lock<mutex> lock(MapPoint::mGlobalMutex);
++        for(const auto &item : mPointVertexId)
++        {
++            MapPoint* pMP = item.first;
++            if(!pMP || pMP->isBad())
++                continue;
++            g2o::VertexSBAPointXYZ *vPoint = static_cast<g2o::VertexSBAPointXYZ *>(optimizer.vertex(item.second));
++            if(!vPoint)
++                continue;
++            pMP->SetWorldPos(vPoint->estimate().cast<float>());
++            pMP->UpdateNormalAndDepth();
++        }
++    }
++
++    return nEdges;
++}
++
+ /**
+  * @brief bundle adjustment 优化过程
+  * @param[in] vpKFs                 参与BA的所有关键帧
+diff --git a/src/System.cc b/src/System.cc
+index d393f91..2475670 100644
+--- a/src/System.cc
++++ b/src/System.cc
+@@ -691,6 +691,177 @@ bool System::RunGlobalBundleAdjustment(const int nIterations, const bool bRobust
+     return true;
+ }
+ 
++bool System::RunFullFrameBundleAdjustment(const int nIterations, const bool bRobust)
++{
++    if(nIterations <= 0)
++        return true;
++
++    if(!mpTracker)
++        return false;
++
++    vector<Frame*> vpFrames;
++    vpFrames.reserve(mpTracker->mlFullFrameBAFrames.size());
++    for(Frame &frame : mpTracker->mlFullFrameBAFrames)
++    {
++        if(frame.isSet())
++            vpFrames.push_back(&frame);
++    }
++
++    if(vpFrames.empty())
++    {
++        cerr << "[Offline] No valid tracked frames for Full-Frame Bundle Adjustment" << endl;
++        return false;
++    }
++
++    cout << "[Offline] Running Full-Frame Pose-Only Visual BA with " << vpFrames.size()
++         << " frames, passes=" << nIterations << ", robust=" << bRobust << endl;
++
++    int nOptimized = 0;
++    int nSkipped = 0;
++    long unsigned int nTotalInliers = 0;
++    for(int pass = 0; pass < nIterations; ++pass)
++    {
++        int nPassOptimized = 0;
++        int nPassSkipped = 0;
++        long unsigned int nPassInliers = 0;
++        for(Frame* pFrame : vpFrames)
++        {
++            int nValidMapPoints = 0;
++            for(MapPoint* &pMP : pFrame->mvpMapPoints)
++            {
++                if(pMP && pMP->isBad())
++                    pMP = static_cast<MapPoint*>(NULL);
++                if(pMP)
++                    ++nValidMapPoints;
++            }
++
++            if(nValidMapPoints < 10)
++            {
++                ++nPassSkipped;
++                continue;
++            }
++
++            const int nInliers = Optimizer::PoseOptimization(pFrame);
++            if(nInliers > 0)
++            {
++                ++nPassOptimized;
++                nPassInliers += nInliers;
++            }
++            else
++            {
++                ++nPassSkipped;
++            }
++        }
++
++        nOptimized = nPassOptimized;
++        nSkipped = nPassSkipped;
++        nTotalInliers = nPassInliers;
++        cout << "[Offline] Full-Frame Pose-Only Visual BA pass " << (pass + 1)
++             << "/" << nIterations << ": optimized_frames=" << nPassOptimized
++             << ", skipped_frames=" << nPassSkipped
++             << ", mean_inliers="
++             << (nPassOptimized > 0 ? static_cast<double>(nPassInliers) / nPassOptimized : 0.0)
++             << endl;
++    }
++
++    cout << "[Offline] Full-Frame Pose-Only Visual BA finished: optimized_frames="
++         << nOptimized << ", skipped_frames=" << nSkipped << ", total_inliers="
++         << nTotalInliers << endl;
++
++    int nRewritten = 0;
++    list<Frame>::iterator lFit = mpTracker->mlFullFrameBAFrames.begin();
++    list<ORB_SLAM3::KeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
++    list<double>::iterator lT = mpTracker->mlFrameTimes.begin();
++    list<bool>::iterator lbL = mpTracker->mlbLost.begin();
++    for(list<Sophus::SE3f>::iterator lit = mpTracker->mlRelativeFramePoses.begin(),
++        lend = mpTracker->mlRelativeFramePoses.end();
++        lit != lend && lRit != mpTracker->mlpReferences.end() &&
++        lT != mpTracker->mlFrameTimes.end() && lbL != mpTracker->mlbLost.end();
++        ++lit, ++lRit, ++lT, ++lbL)
++    {
++        if(*lbL)
++            continue;
++
++        while(lFit != mpTracker->mlFullFrameBAFrames.end() && lFit->mTimeStamp + 1e-9 < *lT)
++            ++lFit;
++
++        if(lFit == mpTracker->mlFullFrameBAFrames.end())
++            break;
++
++        if(fabs(lFit->mTimeStamp - *lT) > 1e-6)
++            continue;
++
++        KeyFrame* pKF = *lRit;
++        if(!pKF)
++            continue;
++
++        *lit = lFit->GetPose() * pKF->GetPoseInverse();
++        ++nRewritten;
++        ++lFit;
++    }
++
++    cout << "[Offline] Rewrote " << nRewritten
++         << " relative frame poses with full-frame optimized poses" << endl;
++    return nOptimized > 0;
++}
++
++void System::SaveFullFrameBATrajectoryEuRoC(const string &filename)
++{
++    cout << endl << "Saving full-frame BA trajectory to " << filename << " ..." << endl;
++    if(!mpTracker)
++    {
++        cerr << "ERROR: tracker is not available." << endl;
++        return;
++    }
++
++    ofstream f;
++    f.open(filename.c_str());
++    f << fixed;
++
++    vector<Map*> vpMaps = mpAtlas->GetAllMaps();
++    int numMaxKFs = 0;
++    Map* pBiggerMap = static_cast<Map*>(NULL);
++    for(Map* pMap : vpMaps)
++    {
++        if(pMap && !pMap->IsBad() && static_cast<int>(pMap->GetAllKeyFrames().size()) > numMaxKFs)
++        {
++            numMaxKFs = static_cast<int>(pMap->GetAllKeyFrames().size());
++            pBiggerMap = pMap;
++        }
++    }
++
++    if(!pBiggerMap || numMaxKFs == 0)
++    {
++        cerr << "ERROR: no valid map is available for full-frame BA trajectory." << endl;
++        f.close();
++        return;
++    }
++
++    vector<KeyFrame*> vpKFs = pBiggerMap->GetAllKeyFrames();
++    sort(vpKFs.begin(), vpKFs.end(), KeyFrame::lId);
++
++    Sophus::SE3f Twb;
++    if(mSensor == IMU_MONOCULAR || mSensor == IMU_STEREO || mSensor == IMU_RGBD)
++        Twb = vpKFs[0]->GetImuPose();
++    else
++        Twb = vpKFs[0]->GetPoseInverse();
++
++    for(Frame &frame : mpTracker->mlFullFrameBAFrames)
++    {
++        if(!frame.isSet())
++            continue;
++        Sophus::SE3f Twc = (frame.GetPose() * Twb).inverse();
++        Eigen::Quaternionf q = Twc.unit_quaternion();
++        Eigen::Vector3f twc = Twc.translation();
++        f << setprecision(6) << 1e9 * frame.mTimeStamp << " " << setprecision(9)
++          << twc(0) << " " << twc(1) << " " << twc(2) << " "
++          << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
++    }
++
++    f.close();
++    cout << endl << "End of saving full-frame BA trajectory to " << filename << " ..." << endl;
++}
++
+ void System::SaveTrajectoryTUM(const string &filename)
+ {
+     cout << endl << "Saving camera trajectory to " << filename << " ..." << endl;
+diff --git a/src/Tracking.cc b/src/Tracking.cc
+index 2d7ac29..7abcfff 100644
+--- a/src/Tracking.cc
++++ b/src/Tracking.cc
+@@ -644,7 +644,8 @@ void Tracking::newParameterLoader(Settings *settings) {
+     Sophus::SE3f Tbc = settings->Tbc();
+     mInsertKFsLost = settings->insertKFsWhenLost();
+     mImuFreq = settings->imuFrequency();
+-    mImuPer = 0.001; //1.0 / (double) mImuFreq;     //TODO: ESTO ESTA BIEN?
++    // Keep the IMU period consistent with the configured frequency.
++    mImuPer = 1.0 / (double) mImuFreq;
+     float Ng = settings->noiseGyro();
+     float Na = settings->noiseAcc();
+     float Ngw = settings->gyroWalk();
+@@ -1401,7 +1402,8 @@ bool Tracking::ParseIMUParamFile(cv::FileStorage &fSettings)
+     if(!node.empty() && node.isInt())
+     {
+         mImuFreq = node.operator int();
+-        mImuPer = 0.001; //1.0 / (double) mImuFreq;
++        // Keep frame / IMU association consistent with the configured IMU rate.
++        mImuPer = 1.0 / (double) mImuFreq;
+     }
+     else
+     {
+@@ -2658,6 +2660,8 @@ void Tracking::Track()
+             mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
+             mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
+             mlbLost.push_back(mState==LOST);
++            if(mState == OK)
++                mlFullFrameBAFrames.push_back(Frame(mCurrentFrame));
+         }
+         else
+         {
+@@ -4606,6 +4610,7 @@ void Tracking::Reset(bool bLocMap)
+     mlpReferences.clear();
+     mlFrameTimes.clear();
+     mlbLost.clear();
++    mlFullFrameBAFrames.clear();
+     mCurrentFrame = Frame();
+     mnLastRelocFrameId = 0;
+     mLastFrame = Frame();

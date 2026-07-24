@@ -11,6 +11,17 @@ graphify-out/
 .DS_Store
 .vscode/
 .idea/
+.deps/
+
+# Local workspace outputs / scratch
+local/
+logs/
+docx/
+new_system/
+new_system_out_test*/
+f_*.txt
+kf_*.txt
+script/graphify-out/
 
 # Default policy: keep data out of git unless explicitly whitelisted.
 data/**

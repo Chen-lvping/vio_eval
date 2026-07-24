@@ -43,13 +43,29 @@ def _read_current_arm_state_direct(arm: Any, state_cls: Any, get_state_func: Any
     return ret, state
 
 
-def _state_to_pose_sample(state: Any, timestamp_s: float) -> Dict[str, Any]:
+def _state_to_pose_sample(
+    state: Any,
+    sample_index: int,
+    timestamp_before_s: float,
+    timestamp_after_s: float,
+    monotonic_before_s: float,
+    monotonic_after_s: float,
+) -> Dict[str, Any]:
     pose = state.pose
     position = pose.position
     quat = pose.quaternion
+    timestamp_midpoint_s = 0.5 * (timestamp_before_s + timestamp_after_s)
 
     return {
-        "timestamp_s": timestamp_s,
+        # Keep timestamp_s for backward compatibility; it now stores the midpoint.
+        "timestamp_s": timestamp_midpoint_s,
+        "timestamp_before_s": timestamp_before_s,
+        "timestamp_after_s": timestamp_after_s,
+        "timestamp_midpoint_s": timestamp_midpoint_s,
+        "monotonic_before_s": monotonic_before_s,
+        "monotonic_after_s": monotonic_after_s,
+        "read_duration_sec": monotonic_after_s - monotonic_before_s,
+        "sample_index": sample_index,
         "position_m": {
             "x": float(position.x),
             "y": float(position.y),
@@ -64,12 +80,22 @@ def _state_to_pose_sample(state: Any, timestamp_s: float) -> Dict[str, Any]:
     }
 
 
-def _read_pose_sample(arm: Any, state_cls: Any, get_state_func: Any) -> Dict[str, Any]:
+def _read_pose_sample(arm: Any, state_cls: Any, get_state_func: Any, sample_index: int) -> Dict[str, Any]:
+    timestamp_before_s = time.time()
+    monotonic_before_s = time.perf_counter()
     ret, state = _read_current_arm_state_direct(arm, state_cls, get_state_func)
-    sample_time_s = time.time()
+    monotonic_after_s = time.perf_counter()
+    timestamp_after_s = time.time()
     if ret != 0:
         raise RuntimeError(f"rm_get_current_arm_state failed, return code: {ret}")
-    return _state_to_pose_sample(state, sample_time_s)
+    return _state_to_pose_sample(
+        state,
+        sample_index,
+        timestamp_before_s,
+        timestamp_after_s,
+        monotonic_before_s,
+        monotonic_after_s,
+    )
 
 
 def record_trajectory(ip: str, port: int, rate_hz: float) -> Dict[str, Any]:
@@ -90,7 +116,7 @@ def record_trajectory(ip: str, port: int, rate_hz: float) -> Dict[str, Any]:
 
     try:
         while True:
-            samples.append(_read_pose_sample(arm, state_cls, get_state_func))
+            samples.append(_read_pose_sample(arm, state_cls, get_state_func, len(samples)))
             next_sample_s = start_monotonic_s + len(samples) * period_s
             sleep_s = next_sample_s - time.perf_counter()
             if sleep_s > 0:
@@ -100,6 +126,7 @@ def record_trajectory(ip: str, port: int, rate_hz: float) -> Dict[str, Any]:
     finally:
         arm.rm_delete_robot_arm()
 
+    end_monotonic_s = time.perf_counter()
     end_time_s = time.time()
     actual_duration_s = end_time_s - start_time_s
     actual_rate_hz = len(samples) / actual_duration_s if actual_duration_s > 0 else 0.0
@@ -115,7 +142,13 @@ def record_trajectory(ip: str, port: int, rate_hz: float) -> Dict[str, Any]:
         "end_time_s": end_time_s,
         "duration_s": actual_duration_s,
         "sample_count": len(samples),
-        "timestamp_source": "host_after_rm_get_current_arm_state",
+        "capture_started_host_s": start_time_s,
+        "capture_ended_host_s": end_time_s,
+        "capture_started_monotonic_s": start_monotonic_s,
+        "capture_ended_monotonic_s": end_monotonic_s,
+        "timestamp_source": "host_midpoint_around_rm_get_current_arm_state",
+        "timestamp_policy": "midpoint_of_rm_get_current_arm_state_call",
+        "scheduler_clock": "time.time + time.perf_counter",
         "samples": samples,
     }
 
