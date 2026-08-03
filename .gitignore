@@ -61,3 +61,6 @@ data/**
 !data/evaluation/
 !data/evaluation/config/
 !data/evaluation/config/*.json
+
+# Curated, short README demo videos only.
+!docs/assets/*.mp4

@@ -12,7 +12,7 @@ An evaluation workspace for visual-inertial odometry (VIO), stereo SLAM, hand-ey
 - **Evidence generation**: trajectory overlays, per-episode viewers, accuracy reports, and synchronized camera/trajectory portfolios.
 - **SXR tracking experiments**: CSV-based stereo tracking runners for Basalt, ORB-SLAM3, OpenVINS, and VINS-Fusion.
 
-Raw recordings, generated trajectories, videos, third-party source trees, build outputs, and local delivery bundles are deliberately excluded from Git. See [data/DATA_LAYOUT.md](data/DATA_LAYOUT.md) for the expected local layout.
+Raw recordings, generated trajectories, third-party source trees, build outputs, and local delivery bundles are deliberately excluded from Git. Only the two short curated demos below are versioned. See [data/DATA_LAYOUT.md](data/DATA_LAYOUT.md) for the expected local layout.
 
 ## Verified RM75 Result
 
@@ -32,6 +32,13 @@ The published portfolio contains eight synchronized camera-and-trajectory episod
 The source record for the table, including camera timestamp matching evidence, is [docs/results/rm75_8_episode_portfolio.csv](docs/results/rm75_8_episode_portfolio.csv). These are selected final visualizations, not a claim of performance on an independently held-out benchmark.
 
 ![ORB feature tracking and aligned RM75 TCP trajectory from the focus showcase.](docs/assets/rm75_focus_episode_20260618_0004.png)
+
+### Video Demos
+
+- [Episode 03 — 3.849 mm APE RMSE](docs/assets/rm75_episode_03.mp4): synchronized stereo images, TCP ground truth and ORB trajectory, with per-frame translation error.
+- [Episode 08 — 8.879 mm APE RMSE](docs/assets/rm75_episode_08.mp4): a longer, high-coverage trajectory that demonstrates the same synchronized evaluation layout.
+
+The rendered videos are visual evidence only; the authoritative numeric records remain in the CSV above.
 
 ## Core Workflow
 
