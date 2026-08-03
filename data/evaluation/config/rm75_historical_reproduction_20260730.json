@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "purpose": "Native stereo-inertial historical reproduction probes. This is not a claim that the archived table can be reproduced bit-for-bit.",
+  "shared": {
+    "camera_rig": "stereo_right",
+    "mode": "stereo-inertial",
+    "orb_root": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_historical_reproduction_ba10_20260730",
+    "orb_branch": "ORB_SLAM3 upstream 4452a3c plus the 20260721 stereo low-excitation guard and the isolated shutdown-time final inertial BA10 patch",
+    "runtime_lock": {
+      "purpose": "Isolated native stereo-inertial BA10 runtime. SHA verification prevents the historical-reproduction command from silently using the mutable clean build.",
+      "executable": {
+        "path": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_historical_reproduction_ba10_20260730/Examples/Stereo-Inertial/stereo_inertial_euroc",
+        "sha256": "25db6dfd7ec5f17ad9e8ee2cad3b5c2d0184fe723faa26e09e19a5338723f08b"
+      },
+      "library_dir": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_historical_reproduction_ba10_20260730/lib",
+      "library": {
+        "path": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_historical_reproduction_ba10_20260730/lib/libORB_SLAM3.so",
+        "sha256": "2c8ab6be613c8db6b6dca15f9771c45385894483f5766d1572f86becfb883fc1"
+      },
+      "capability": "native stereo-inertial BA10; requires the final-BA completion marker in the native log"
+    },
+    "feature_preset": "low-texture",
+    "imu_fast_init": 0,
+    "vins_noise_mode": "orb_from_vins",
+    "vins_noise_only": true,
+    "shared_vins_config": "data/gripper/gripper_data2/episode_20260618_0004/right/vio_log/generated_config/StereoIMU-vinsfusion.yaml",
+    "nfeatures": 3000,
+    "ini_fast": 12,
+    "min_fast": 3,
+    "final_ba_iters": 10,
+    "final_ba_contract": "BA10 is accepted only when the ORB executable records '[FINAL_INERTIAL_BA] completed iterations=10'.",
+    "offline_deterministic": false,
+    "offline_wait_timeout_sec": 10.0,
+    "allow_stereo_fallback": false,
+    "timeout_sec": 720,
+    "smooth_window": 5,
+    "smooth_passes": 1
+  },
+  "episodes": {
+    "main/0004": {
+      "episode_dir": "data/gripper/gripper_data2/episode_20260618_0004",
+      "ground_truth": "data/ground_truth/rm75/rm75_pose_traj_4.json",
+      "strict_sync_offset_sec": -0.116364090424,
+      "native_ba10_reference_ape_mm": 6.485,
+      "probe_acceptance_ape_mm": 7.0
+    },
+    "main/0018": {
+      "episode_dir": "data/gripper/0707/episode_20260707_0001",
+      "ground_truth": "data/gripper/0707/rm75_pose_traj01.json",
+      "strict_sync_offset_sec": 0.010575909576000063,
+      "native_inertial_reference_ape_mm": 7.932,
+      "historical_table_ba10_ape_mm": 6.622,
+      "historical_table_ba10_note": "Curated provenance marks this value as stereo fallback, so it is not a native inertial acceptance threshold.",
+      "probe_acceptance_ape_mm": 8.5
+    }
+  }
+}

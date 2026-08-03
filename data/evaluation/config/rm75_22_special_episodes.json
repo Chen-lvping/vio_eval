@@ -1,0 +1,4 @@
+{
+  "episode_gripper_0017": "Historical inertial estimate was incomplete; inspect the new coverage-gated fallback result before restoring it to the primary score.",
+  "episode_gripper_0022": "Special long sequence: stereo-inertial run exceeded the current runtime budget and was stopped after more than 7 minutes."
+}

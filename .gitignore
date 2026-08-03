@@ -6,6 +6,33 @@ __pycache__/
 
 # Local generated output
 graphify-out/
+ego_fleet_results/
+build_logs/
+tmp/
+
+# Large local dependencies and generated delivery bundles
+third_party/
+delivery/
+resume_output/
+gca_nav_experiment_upgrade/
+local_skills/
+
+# Personal and machine-local artifacts
+docs/*.docx
+*.zip
+*.pdf
+*.mp4
+*.bag
+*.db3
+*.mcap
+
+# Data is local by default. Keep only small, explicitly versioned inputs.
+data/evaluation/workbench/
+data/evaluation/recovered/
+data/evaluation/staging/
+data/evaluation/archive/
+data/evaluation/core/
+data/evaluation/camera_benchmark/
 
 # IDE / OS
 .DS_Store
@@ -31,3 +58,6 @@ data/**
 !data/calibration/camera_cam0_640x400_intrinsics.yaml
 !data/calibration/handeye_0615/
 !data/calibration/handeye_0615/*.yaml
+!data/evaluation/
+!data/evaluation/config/
+!data/evaluation/config/*.json

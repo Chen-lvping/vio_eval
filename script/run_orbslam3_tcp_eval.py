@@ -433,11 +433,14 @@ def runtime_env(args: argparse.Namespace) -> dict[str, str]:
     env = os.environ.copy()
     candidates: list[Path | str] = [
         DEFAULT_PANGOLIN_LIB,
+        # An explicitly requested runtime library is an experiment contract,
+        # not merely an additional search location.  Keep it ahead of the
+        # mutable ORB root so a locked reproduction can select its exact ABI.
+        *args.extra_ld_path,
         args.orb_root / "lib",
         args.orb_root / "Thirdparty/DBoW2/lib",
         args.orb_root / "Thirdparty/g2o/lib",
     ]
-    candidates.extend(args.extra_ld_path)
     paths = [str(path) for path in candidates if Path(path).is_dir()]
     if env.get("LD_LIBRARY_PATH"):
         paths.append(env["LD_LIBRARY_PATH"])
@@ -820,6 +823,7 @@ def main() -> int:
     fallback_pose_csv: Path | None = None
     viewer_cmd: list[str] | None = None
     fell_back = False
+    final_ba_executed = False
 
     run_checked(export_cmd)
     run_checked(settings_cmd)
@@ -866,6 +870,15 @@ def main() -> int:
             fell_back = True
         if rc != 0 and not has_rows(trajectory_path):
             raise RuntimeError(f"ORB-SLAM3 failed with code {rc}; see {output_dir / 'orbslam3_native.log'}")
+
+        if int(args.final_ba_iters) > 0 and requested_mode == "stereo-inertial":
+            native_log = (output_dir / "orbslam3_native.log").read_text(encoding="utf-8", errors="replace")
+            final_ba_executed = f"[FINAL_INERTIAL_BA] completed iterations={int(args.final_ba_iters)}" in native_log
+            if not final_ba_executed:
+                raise RuntimeError(
+                    "requested final inertial BA was not confirmed by ORB-SLAM3; "
+                    f"see {output_dir / 'orbslam3_native.log'}"
+                )
 
     trajectory_path = find_trajectory(output_dir, name)
     if not fell_back and args.mode == "stereo-inertial":
@@ -1074,6 +1087,7 @@ def main() -> int:
         "invert_tbc": bool(args.invert_tbc),
         "imu_fast_init": args.imu_fast_init,
         "final_ba_iters": args.final_ba_iters,
+        "final_inertial_ba_executed": final_ba_executed,
         "vins_config": str(vins_config) if vins_config is not None else "",
         "vins_noise_only": bool(args.vins_noise_only),
         "match_vins_config": bool(args.match_vins_config),

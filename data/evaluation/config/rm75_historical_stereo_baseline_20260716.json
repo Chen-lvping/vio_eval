@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "profile_id": "rm75-historical-stereo-20260716",
+  "purpose": "Exact lock for the best reproducible 2026-07-16 colleague ORB-SLAM3 pure-stereo baseline on the 18 clean RM75 episodes.",
+  "dataset_contract": {
+    "episode_count": 18,
+    "same_physical_device": true,
+    "camera_rig": "stereo_right",
+    "left_camera_serial": "X26170311",
+    "right_camera_serial": "X26040087",
+    "inactive_stereo_left_is_ignored": true,
+    "active_stereo_right_plus_imu_right_canonical_sha256": "8e152708c6589c5d61313704c938606bf72b5ab458e524834dc5848365beae5f"
+  },
+  "algorithm": {
+    "tracking_mode": "stereo",
+    "imu_fusion": false,
+    "offline_accurate": true,
+    "gba_iterations": 100,
+    "full_frame_visual_ba_iterations": 10,
+    "orb_features": 1200,
+    "orb_scale_factor": 1.2,
+    "orb_levels": 8,
+    "orb_ini_th_fast": 20,
+    "orb_min_th_fast": 7,
+    "position_smoothing_window": 21,
+    "position_smoothing_poly": 2,
+    "rotation_smoothing_window": 9,
+    "allow_fallback": false
+  },
+  "calibration_lock": {
+    "path": "data/evaluation/config/rm75_stereo_right_unified_historical_calibration_locked_20260716.json",
+    "sha256": "f02bf510fa4c74fe74950546257b0d721e5ba20c1cac9d9c5518e412dc861647"
+  },
+  "offset_lock": {
+    "path": "data/evaluation/config/rm75_clean18_historical_best_offsets_20260716.json",
+    "sha256": "7431376774ee1d69f9ac70de1932e97832de09ee3221c8c6fe5a3d71d080af9f",
+    "meaning": "Per-episode strict-sync timestamp compensation only; it is not a camera or algorithm parameter."
+  },
+  "runtime_lock": {
+    "root": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_colleague_sync",
+    "executable": {
+      "path": "Examples/Stereo/stereo_euroc_offline",
+      "sha256": "7c5d51129dd0adc50c37cf74465ac963552bcc999774765a151a92aca3eb85ab"
+    },
+    "orb_library": {
+      "path": "lib/libORB_SLAM3.so",
+      "sha256": "d4316bb2a5272bb644f5fadfe407475edb140a67727c67bae14e96458acea225"
+    },
+    "dbow2_library": {
+      "path": "Thirdparty/DBoW2/lib/libDBoW2.so",
+      "sha256": "7586680dccebae622f6abba030e09e89924e710e22447fc50df66db10380ff2e"
+    },
+    "g2o_library": {
+      "path": "Thirdparty/g2o/lib/libg2o.so",
+      "sha256": "63e960b1fd76564db9104c9b5f467b65a39d6fc16acf111ad374622ef3cabf48"
+    },
+    "runner": {
+      "path": "/home/chenlvping/1_DM_work/vio_eval/script/vendor/orbslam3_colleague_20260716/run_fays_orbslam3_stereo_right.py",
+      "sha256": "d914a3c32d9c27a374cedec7c0d277fff32bc06f63f295b15ad82865e84f6c95"
+    },
+    "smoother": {
+      "path": "/home/chenlvping/1_DM_work/vio_eval/script/vendor/orbslam3_colleague_20260716/smooth_pose_csv.py",
+      "sha256": "8039ce3aa2f6d8b968d723e96a2a194127e8154fddf5b0ed02d258ebc14ccc21"
+    },
+    "vocabulary": {
+      "path": "Vocabulary/ORBvoc.txt",
+      "sha256": "f8dd027f7a6cb88129821341194d7f2c75b77b3394257ddd0d2229863d1a3570"
+    }
+  },
+  "historical_reference": {
+    "formal_22_episode_mean_ape_mm": 15.04,
+    "formal_22_episode_pass_10mm": 12,
+    "main_0004_table_ape_mm": 6.216096385140522,
+    "main_0004_recovered_recheck_ape_mm": 6.258989,
+    "main_0004_recovered_recheck_rpe_mm": 0.968441,
+    "main_0004_acceptance_ape_mm": 6.6,
+    "note": "The historical 6.622 mm main/0018 IMU BA10 table entry actually fell back to stereo and is not a native-IMU reference."
+  }
+}

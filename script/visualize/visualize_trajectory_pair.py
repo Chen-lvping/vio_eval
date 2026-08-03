@@ -80,7 +80,7 @@ HTML = r"""<!doctype html>
 </div>
 <script>
 const data = __VIEWER_DATA__;
-let mode = "raw";
+let mode = data.default_mode;
 let yaw = -0.55;
 let pitch = 0.48;
 let zoom = 1.0;
@@ -586,6 +586,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--title", default=None)
     parser.add_argument("--max-points", type=int, default=3000)
     parser.add_argument("--align-samples", type=int, default=600)
+    parser.add_argument(
+        "--default-mode",
+        choices=("raw", "se3", "sim3"),
+        default="raw",
+        help="Alignment view selected when the viewer opens. The input files are never modified.",
+    )
     return parser.parse_args()
 
 
@@ -621,6 +627,7 @@ def main() -> int:
         "subtitle": "Compare two trajectories locally. Raw / SE(3) / Sim(3) are shape-alignment views, not timestamp-matched metrics.",
         "reference_name": args.ref_name,
         "estimate_name": args.est_name,
+        "default_mode": args.default_mode,
         "inputs": {
             "reference_name": args.ref_name,
             "estimate_name": args.est_name,

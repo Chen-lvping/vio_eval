@@ -1,0 +1,48 @@
+{
+  "name": "RM75 colleague best fixed-device restoration",
+  "purpose": "Reproduce the formal 2026-07-16 RM75 accuracy baseline with one explicit stereo_right calibration for the retained same-device episodes.",
+  "algorithm": {
+    "implementation": "ORB-SLAM3 colleague offline stereo",
+    "tracking_mode": "stereo",
+    "global_bundle_adjustment_iterations": 100,
+    "full_frame_bundle_adjustment_iterations": 10,
+    "orb_features": 1200,
+    "orb_ini_th_fast": 20,
+    "orb_min_th_fast": 7
+  },
+  "postprocess": {
+    "position_savgol_window": 21,
+    "position_savgol_polynomial_order": 2,
+    "rotation_window": 9,
+    "strict_sync_offsets": "data/evaluation/config/rm75_colleague_best_strict_sync_offsets.json",
+    "strict_sync_note": "Offsets correct the recorded time-axis phase; they are not ORB-SLAM3 algorithm parameters."
+  },
+  "shared_device_calibration": {
+    "camera_rig": "stereo_right",
+    "calibration_json": "data/gripper/gripper_data2/episode_20260618_0004/calibration.json",
+    "sha256": "f02bf510fa4c74fe74950546257b0d721e5ba20c1cac9d9c5518e412dc861647",
+    "policy": "Pass this exact calibration explicitly to every retained episode; do not fall back to each episode snapshot."
+  },
+  "runtime": {
+    "repository": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_colleague_sync",
+    "git_head": "caa51232ab4e7d303248ed64e8f2dca0cb9271bc",
+    "offline_binary": "Examples/Stereo/stereo_euroc_offline",
+    "offline_binary_sha256": "7c5d51129dd0adc50c37cf74465ac963552bcc999774765a151a92aca3eb85ab",
+    "orbslam_library": "lib/libORB_SLAM3.so",
+    "orbslam_library_sha256": "d4316bb2a5272bb644f5fadfe407475edb140a67727c67bae14e96458acea225",
+    "runner": "scripts/run_fays_orbslam3_stereo_right.py",
+    "runner_sha256": "150edc1344d8a36d71c6e7bfe73a25cdea190f79668c487e538ce9a58ce73119"
+  },
+  "scope": {
+    "source": "data/evaluation/curated/rm75_main_clean_ape_le_50mm_20260729/episodes.csv",
+    "excluded": ["main/0002", "main/0005", "main/0006", "main/0008"],
+    "user_explicit_exclusion": "main/0005"
+  },
+  "validation": {
+    "first_episode": "main/0004",
+    "recovered_ape_translation_se3_rmse_mm": 6.259,
+    "historical_table_ape_translation_se3_rmse_mm": 6.216,
+    "provisional_acceptance_ape_translation_se3_rmse_mm": 7.0,
+    "next_episode_after_acceptance": "main/0018"
+  }
+}

@@ -32,7 +32,6 @@ MSG_START = 0x01
 MSG_STOP = 0x02
 MSG_IMU_DATA = 0x04
 MSG_FW_VERSION = 0x08
-CONTROL_ACK_FLAG = 0x01
 
 
 @dataclass
@@ -117,63 +116,6 @@ def read_bridge_frame(port: serial.Serial, timeout_sec: float) -> BridgeFrame | 
     return None
 
 
-def drain_bridge_frames(port: serial.Serial, duration_sec: float) -> list[BridgeFrame]:
-    frames: list[BridgeFrame] = []
-    deadline = time.time() + max(duration_sec, 0.0)
-    while time.time() < deadline:
-        frame = read_bridge_frame(port, min(0.05, max(deadline - time.time(), 0.01)))
-        if frame is not None:
-            frames.append(frame)
-    return frames
-
-
-def send_stop_and_wait(port: serial.Serial, seq: int, timeout_sec: float) -> bool:
-    port.write(build_frame(MSG_STOP, seq))
-    deadline = time.time() + timeout_sec
-    while time.time() < deadline:
-        frame = read_bridge_frame(port, min(0.2, max(deadline - time.time(), 0.01)))
-        if frame is None:
-            continue
-        if frame.msg_type == MSG_STOP and frame.flags == CONTROL_ACK_FLAG and frame.seq == seq:
-            return True
-    return False
-
-
-def request_fw_info(port: serial.Serial, retries: int = 3) -> dict[str, str]:
-    for attempt in range(retries):
-        seq = 1 + attempt
-        port.reset_input_buffer()
-        port.reset_output_buffer()
-        send_stop_and_wait(port, 100 + seq, 0.4)
-        drain_bridge_frames(port, 0.1)
-        time.sleep(0.05)
-        port.write(build_frame(MSG_FW_VERSION, seq))
-        deadline = time.time() + 2.0
-        while time.time() < deadline:
-            frame = read_bridge_frame(port, min(0.25, max(deadline - time.time(), 0.01)))
-            if frame is None:
-                continue
-            if frame.msg_type == MSG_FW_VERSION and frame.flags == CONTROL_ACK_FLAG and frame.seq == seq:
-                return parse_fw_payload(frame.payload)
-    raise RuntimeError("failed to read FW_VERSION after retries")
-
-
-def start_imu_stream(port: serial.Serial, retries: int = 3) -> None:
-    payload = b"\x01\x00\x00\x00"
-    for attempt in range(retries):
-        seq = 10 + attempt
-        drain_bridge_frames(port, 0.05)
-        port.write(build_frame(MSG_START, seq, payload))
-        deadline = time.time() + 2.0
-        while time.time() < deadline:
-            frame = read_bridge_frame(port, min(0.25, max(deadline - time.time(), 0.01)))
-            if frame is None:
-                continue
-            if frame.msg_type == MSG_START and frame.flags == CONTROL_ACK_FLAG and frame.seq == seq:
-                return
-    raise RuntimeError("failed to read START ack for IMU after retries")
-
-
 def common_ld_paths(orb_root: Path) -> list[str]:
     candidates = [
         orb_root / "lib",
@@ -213,8 +155,19 @@ def capture_imu_samples(port_name: str, duration_sec: float, raw_csv_path: Path)
     rows: list[tuple[int, float, float, float, float, float, float]] = []
     fw_info: dict[str, str] = {}
     with serial.Serial(port_name, BAUD, timeout=0.1) as port:
-        fw_info = request_fw_info(port)
-        start_imu_stream(port)
+        port.reset_input_buffer()
+        port.reset_output_buffer()
+
+        port.write(build_frame(MSG_FW_VERSION, 1))
+        fw = read_bridge_frame(port, 2.0)
+        if fw is None or fw.msg_type != MSG_FW_VERSION:
+            raise RuntimeError("failed to read FW_VERSION")
+        fw_info = parse_fw_payload(fw.payload)
+
+        port.write(build_frame(MSG_START, 2, b"\x01\x00\x00\x00"))
+        ack = read_bridge_frame(port, 2.0)
+        if ack is None or ack.msg_type != MSG_START or ack.flags != 0x01:
+            raise RuntimeError("failed to read START ack for IMU")
 
         deadline = time.time() + duration_sec
         while time.time() < deadline:
@@ -248,7 +201,12 @@ def capture_imu_samples(port_name: str, duration_sec: float, raw_csv_path: Path)
                     continue
                 rows.append((int(ts * 1000), float(values[0]), float(values[1]), float(values[2]), float(values[3]), float(values[4]), float(values[5])))
 
-        send_stop_and_wait(port, 20, 1.5)
+        port.write(build_frame(MSG_STOP, 3))
+        stop_deadline = time.time() + 2.0
+        while time.time() < stop_deadline:
+            frame = read_bridge_frame(port, 0.3)
+            if frame is not None and frame.msg_type == MSG_STOP and frame.flags == 0x01:
+                break
 
     raw_csv_path.parent.mkdir(parents=True, exist_ok=True)
     with raw_csv_path.open("w", newline="", encoding="utf-8") as handle:
@@ -314,10 +272,10 @@ def parse_yctc_block(payload: bytes) -> tuple[int, int, int, int] | None:
     magic = b"YCTC"
     pos = payload.find(magic)
     while pos != -1:
-        if pos + 8 <= len(payload):
+        if pos + 32 <= len(payload):
             version = struct.unpack_from("<H", payload, pos + 4)[0]
             block_size = struct.unpack_from("<H", payload, pos + 6)[0]
-            if version == 1 and block_size in (32, 48) and pos + block_size <= len(payload):
+            if version == 1 and block_size == 32:
                 left_pts = struct.unpack_from("<Q", payload, pos + 8)[0]
                 right_pts = struct.unpack_from("<Q", payload, pos + 16)[0]
                 left_exp = struct.unpack_from("<I", payload, pos + 24)[0]

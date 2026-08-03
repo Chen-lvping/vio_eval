@@ -1,0 +1,9 @@
+portfolio_episode,source_episode,ape_translation_se3_rmse_mm,matched_pairs,evidence,max_camera_delta_ms
+Episode 01,episode_20260618_0004,6.281079,1097,camera_and_trajectory,35.000563
+Episode 02,episode_20260624_0001,7.369266,655,camera_and_trajectory,0.116110
+Episode 03,episode_20260624_0004,3.848947,392,camera_and_trajectory,19.884348
+Episode 04,episode_20260624_0005,5.171026,1946,camera_and_trajectory,19.884586
+Episode 05,episode_20260707_0001,9.037298,1444,camera_and_trajectory,0.000477
+Episode 06,episode_20260707_0003,6.063861,3377,camera_and_trajectory,0.000715
+Episode 07,episode_20260707_0004,7.512516,2949,camera_and_trajectory,0.000477
+Episode 08,episode_20260707_0005,8.879199,7609,camera_and_trajectory,0.000238

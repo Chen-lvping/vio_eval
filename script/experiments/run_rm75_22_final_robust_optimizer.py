@@ -64,6 +64,13 @@ def parse_args() -> argparse.Namespace:
         help="Uniformly subsample GT during offset search; final metrics always use all matched samples.",
     )
     parser.add_argument("--fusion-weights", default="0.25,0.50,0.75")
+    parser.add_argument(
+        "--robust-fusion-alpha",
+        type=float,
+        choices=(0.25, 0.50, 0.75),
+        default=0.25,
+        help="One shared conservative IMU weight for the deployable quality-gated result.",
+    )
     parser.add_argument("--position-window", type=int, default=21)
     parser.add_argument("--position-poly", type=int, default=2)
     parser.add_argument("--rotation-window", type=int, default=9)
@@ -403,6 +410,7 @@ def robust_gate_candidate(
     coverage: float,
     shadow_mm: float,
     shadow_scale: float,
+    fusion_alpha: float,
 ) -> str:
     names = {str(row["candidate"]) for row in rows if row.get("status") == "ok"}
     trusted_imu = (
@@ -411,8 +419,9 @@ def robust_gate_candidate(
         and shadow_mm <= 30.0
         and (not np.isfinite(shadow_scale) or 0.70 <= shadow_scale <= 1.30)
     )
-    if trusted_imu and "fusion_a0.75" in names:
-        return "fusion_a0.75"
+    fusion_name = f"fusion_a{fusion_alpha:.2f}"
+    if trusted_imu and fusion_name in names:
+        return fusion_name
     if trusted_imu and "stereo_imu" in names:
         return "stereo_imu"
     return "stereo"
@@ -599,7 +608,13 @@ def main() -> int:
             )
             continue
         oracle = min(ok_rows, key=lambda row: (float(row["ape_mm"]), float(row["rpe_mm"])))
-        gate_name = robust_gate_candidate(ok_rows, coverage, shadow_mm, shadow_scale)
+        gate_name = robust_gate_candidate(
+            ok_rows,
+            coverage,
+            shadow_mm,
+            shadow_scale,
+            args.robust_fusion_alpha,
+        )
         gate = next((row for row in ok_rows if row["candidate"] == gate_name), None)
         if gate is None:
             gate = next(row for row in ok_rows if row["candidate"] == "stereo")

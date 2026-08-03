@@ -1,0 +1,23 @@
+{
+  "algorithm": "ORB-SLAM3",
+  "mode": "stereo-inertial",
+  "camera_rig": "stereo_right",
+  "feature_preset": "low-texture",
+  "nfeatures": 3000,
+  "ini_fast": 12,
+  "min_fast": 3,
+  "imu_fast_init": 0,
+  "calibration_profiles": "rm75_gripper_22_vins_config_profiles.json",
+  "vins_noise_mode": "orb_from_vins",
+  "smooth_window": 5,
+  "smooth_passes": 1,
+  "min_inertial_coverage": 0.25,
+  "stereo_shadow_gate": true,
+  "stereo_shadow_max_disagreement_mm": 15.0,
+  "stereo_fallback_backend": "ORB-SLAM3 offline stereo GBA100 + full-frame BA10 + smooth 21/2/9",
+  "final_ba_iters": 0,
+  "offline_deterministic": false,
+  "calibration_policy": "Use the per-episode historically validated VINS calibration; 0707 uses the 20260707-compatible profile instead of its incompatible regenerated noise/extrinsic convention",
+  "time_policy": "Use the per-episode strict-sync offset JSON",
+  "fallback_policy": "Use stereo only when stereo-inertial initialization/coverage fails"
+}

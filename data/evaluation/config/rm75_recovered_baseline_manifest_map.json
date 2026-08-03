@@ -1,0 +1,22 @@
+{
+  "episode_gripper_0001": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_141821/eval_episode_gripper_0001/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0002": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_155120/eval_episode_gripper_0002/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0003": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_141821/eval_episode_gripper_0003/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0004": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_155120/eval_episode_gripper_0004/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0005": "data/evaluation/workbench/rm75_shutdown_wait_badset/orbslam3_rm75_batch_eval_20260721_191516/eval_episode_gripper_0005/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0006": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_141821/eval_episode_gripper_0006/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0007": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_141821/eval_episode_gripper_0007/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0008": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_155120/eval_episode_gripper_0008/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0009": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0001/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0010": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0002/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0011": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0003/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0012": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0004/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0013": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0005/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0014": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0006/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0015": "data/evaluation/workbench/rm75_unified_recovery_6_24/orbslam3_rm75_batch_eval_20260721_201954/eval_episode_20260624_0007/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0016": "data/evaluation/workbench/orbslam3_rm75_batch_eval_20260708_141821/eval_episode_gripper_0016/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0018": "data/evaluation/workbench/rm75_global_config_validation/episode_0018/orbslam3_rm75_batch_eval_20260721_183157/eval_episode_gripper_0018/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0019": "data/evaluation/workbench/rm75_global_config_validation/episode_0019/orbslam3_rm75_batch_eval_20260721_183458/eval_episode_gripper_0019/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0020": "data/evaluation/workbench/rm75_global_config_validation/episode_0020/orbslam3_rm75_batch_eval_20260721_183707/eval_episode_gripper_0020/orbslam3_tcp_eval_manifest.json",
+  "episode_gripper_0021": "data/evaluation/workbench/rm75_global_config_validation/episode_0021/orbslam3_rm75_batch_eval_20260721_184042/eval_episode_gripper_0021/orbslam3_tcp_eval_manifest.json"
+}

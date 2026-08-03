@@ -37,6 +37,8 @@
   参数和约定扫描脚本
 - `visualize/`
   专项 viewer 和对比可视化
+- `vendor/`
+  固化的外部 ORB-SLAM3 运行辅助脚本；不包含第三方 SLAM 源码或构建产物
 
 ## Quick Map
 
@@ -49,6 +51,8 @@
 - 时间同步 SOP：见 [SOP_rm75_time_sync.md](/home/chenlvping/1_DM_work/vio_eval/script/SOP_rm75_time_sync.md:1)
 - 重教轨迹平滑回放 SOP：见 [SOP_reteach_trajectory_replay.md](/home/chenlvping/1_DM_work/vio_eval/script/SOP_reteach_trajectory_replay.md:1)
 - 主评估链路：先看 `run_orbslam3_tcp_eval.py`、`run_orbslam3_rm75_batch_eval.py`、`evaluate_vio_tcp_camera_evo.py`
+- SXR CSV tracking：先看 `run_sxr_tracking_basalt_batch.py`；单 episode runner 位于 `run_sxr_csv_*.py` 与 `run_sxr_*.py`
+- RM75 最终可视化：先看 `visualize/build_rm75_camera_trajectory_portfolio.py`
 - 排错：优先去 `diagnose/`、`scan/`、`experiments/`
 - 额外可视化：去 `visualize/`
 # 主推荐入口

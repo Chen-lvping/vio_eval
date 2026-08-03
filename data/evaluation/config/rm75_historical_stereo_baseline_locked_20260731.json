@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "purpose": "Fail-closed reproduction of the 2026-07-16 pure-stereo RM75 baseline.",
+  "runtime": {
+    "root": "/home/chenlvping/1_DM_work/orbslam3_fresh/ORB_SLAM3_exact_20260716",
+    "base_commit": "caa51232ab4e7d303248ed64e8f2dca0cb9271bc",
+    "anchor_patch": "docs/version_anchors/patches/orbslam3_colleague_sync_best_20260716.patch",
+    "anchor_patch_sha256": "361b30d0dd4acf31b075fcef3ecd6e06903d8e3515fb3b3aafaee9e613e7a8b7",
+    "executable": "Examples/Stereo/stereo_euroc_offline",
+    "executable_sha256": "ac8379ec4b7329e1d9f16fb157b0879b82e235aa6af98bc086f3024d16e09843",
+    "library": "lib/libORB_SLAM3.so",
+    "library_sha256": "b66de65fe0bfee9f4469205bea02d1e562f58c78a40af3bc886fc111a6001be1",
+    "runner": "scripts/run_fays_orbslam3_stereo_right.py",
+    "runner_sha256": "2f6f147d788e00662eadfa6ab8b50cadf00971eca9d64a00e66ef355436eac12",
+    "smoother": "scripts/smooth_pose_csv.py",
+    "smoother_sha256": "2175b0aeb550fdc7689e85652e228ce3701bdf12708eb52935f1db667847506e",
+    "vocabulary": "Vocabulary/ORBvoc.txt",
+    "vocabulary_sha256": "f8dd027f7a6cb88129821341194d7f2c75b77b3394257ddd0d2229863d1a3570"
+  },
+  "calibration": {
+    "path": "data/evaluation/config/rm75_stereo_right_unified_historical_calibration_locked_20260716.json",
+    "sha256": "f02bf510fa4c74fe74950546257b0d721e5ba20c1cac9d9c5518e412dc861647",
+    "camera_key": "stereo_right",
+    "device_scope": "All selected episodes were recorded by the same device; this calibration is intentionally shared."
+  },
+  "algorithm": {
+    "tracking_mode": "stereo",
+    "offline_accurate": true,
+    "gba_iterations": 100,
+    "full_frame_ba_iterations": 10,
+    "orb_features": 1200,
+    "orb_scale_factor": 1.2,
+    "orb_levels": 8,
+    "orb_init_fast": 20,
+    "orb_min_fast": 7,
+    "position_window": 21,
+    "position_poly": 2,
+    "rotation_window": 9,
+    "t_max_diff_sec": 0.01,
+    "fallback_allowed": false
+  },
+  "input_gate": {
+    "audit_script": "script/experiments/audit_rm75_historical_baseline_inputs.py",
+    "audit_csv": "data/evaluation/workbench/rm75_historical_input_audit_20260731/input_audit.csv",
+    "required_timestamp_match_ratio": 0.999,
+    "ready_episodes": [
+      "main/0001", "main/0003", "main/0004", "main/0009", "main/0011", "main/0012",
+      "main/0013", "main/0018", "main/0019", "main/0020", "main/0021", "main/0022"
+    ],
+    "blocked_episodes": {
+      "main/0007": "raw content/time domain mismatch",
+      "main/0010": "raw content/time domain mismatch",
+      "main/0014": "raw dataset missing",
+      "main/0015": "raw dataset missing",
+      "main/0016": "raw content/time domain mismatch",
+      "main/0017": "raw dataset missing"
+    },
+    "explicitly_excluded": ["main/0005"]
+  },
+  "episodes": {
+    "main/0001": {"episode_dir": "data/gripper/gripper_data2/episode_20260618_0001", "ground_truth": "data/ground_truth/rm75/rm75_pose_traj_1.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 10.546},
+    "main/0003": {"episode_dir": "data/gripper/gripper_data2/episode_20260618_0003", "ground_truth": "data/ground_truth/rm75/rm75_pose_traj_3.json", "strict_sync_offset_sec": -0.005, "historical_stereo_ape_mm": 13.178},
+    "main/0004": {"episode_dir": "data/gripper/gripper_data2/episode_20260618_0004", "ground_truth": "data/ground_truth/rm75/rm75_pose_traj_4.json", "strict_sync_offset_sec": -0.115, "historical_stereo_ape_mm": 6.216, "gate_acceptance_ape_mm": 6.6},
+    "main/0009": {"episode_dir": "data/gripper/gripper_data_6_24/episode_20260624_0001", "ground_truth": "data/ground_truth/rm75_6_24/rm75_pose_traj_1.json", "strict_sync_offset_sec": 0.00011590957641601562, "historical_stereo_ape_mm": 7.377},
+    "main/0011": {"episode_dir": "data/gripper/gripper_data_6_24/episode_20260624_0003", "ground_truth": "data/ground_truth/rm75_6_24/rm75_pose_traj_3.json", "strict_sync_offset_sec": -0.029884090423583975, "historical_stereo_ape_mm": 15.107},
+    "main/0012": {"episode_dir": "data/gripper/gripper_data_6_24/episode_20260624_0004", "ground_truth": "data/ground_truth/rm75_6_24/rm75_pose_traj_4.json", "strict_sync_offset_sec": -0.05988409042358398, "historical_stereo_ape_mm": 3.76, "gate_acceptance_ape_mm": 4.3},
+    "main/0013": {"episode_dir": "data/gripper/gripper_data_6_24/episode_20260624_0005", "ground_truth": "data/ground_truth/rm75_6_24/rm75_pose_traj_5.json", "strict_sync_offset_sec": -0.05988409042358398, "historical_stereo_ape_mm": 5.18},
+    "main/0018": {"episode_dir": "data/gripper/0707/episode_20260707_0001", "ground_truth": "data/gripper/0707/rm75_pose_traj01.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 8.617},
+    "main/0019": {"episode_dir": "data/gripper/0707/episode_20260707_0002", "ground_truth": "data/gripper/0707/rm75_pose_traj02.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 12.049},
+    "main/0020": {"episode_dir": "data/gripper/0707/episode_20260707_0003", "ground_truth": "data/gripper/0707/rm75_pose_traj03.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 5.329},
+    "main/0021": {"episode_dir": "data/gripper/0707/episode_20260707_0004", "ground_truth": "data/gripper/0707/rm75_pose_traj04.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 6.984},
+    "main/0022": {"episode_dir": "data/gripper/0707/episode_20260707_0005", "ground_truth": "data/gripper/0707/rm75_pose_traj05.json", "strict_sync_offset_sec": 0.0, "historical_stereo_ape_mm": 8.186}
+  }
+}

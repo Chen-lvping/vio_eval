@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-24",
+  "baseline_commit": "d91ce1d",
+  "historical_report": "data/evaluation/workbench/rm75_22_final_robust_20260722/full_stereo_vs_stereo_imu_comparison_20260724.md",
+  "historical_report_sha256": "9ee293669c6dfecd866de6b4ef1ecf27cc5d5ee12c523762577a43d3c615bfb4",
+  "canonical_calibration": "data/evaluation/config/rm75_stereo_right_unified_historical_calibration.json",
+  "canonical_calibration_sha256": "f02bf510fa4c74fe74950546257b0d721e5ba20c1cac9d9c5518e412dc861647",
+  "fair_offset_policy": "Use the frozen stereo_ba10 historical offset for every candidate of an episode; never scan candidate offsets.",
+  "degradation_rule": "APE increase greater than max(2 mm, 10 percent of the paired control APE) on the same evaluation interval.",
+  "pilot": [
+    "main/0004",
+    "main/0008",
+    "0708_xht/0009"
+  ],
+  "development_set": [
+    "main/0001",
+    "main/0003",
+    "main/0004",
+    "main/0007",
+    "main/0009",
+    "main/0011",
+    "main/0018",
+    "main/0020",
+    "main/0006",
+    "main/0008",
+    "0708_xht/0009",
+    "0708/0001",
+    "0708_2/0004",
+    "0708_xht/0008"
+  ],
+  "episodes": [
+    {
+      "key": "main/0001",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0001",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_1.json",
+      "fixed_offset_sec": -0.01928,
+      "historical_stereo_ba10_ape_mm": 10.546,
+      "historical_imu_ba0_ape_mm": 15.934,
+      "historical_imu_ba10_ape_mm": 14.955
+    },
+    {
+      "key": "main/0003",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0003",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_3.json",
+      "fixed_offset_sec": -0.001884090424,
+      "historical_stereo_ba10_ape_mm": 13.178,
+      "historical_imu_ba0_ape_mm": 8.904,
+      "historical_imu_ba10_ape_mm": 10.471
+    },
+    {
+      "key": "main/0004",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0004",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_4.json",
+      "fixed_offset_sec": -0.11216,
+      "historical_stereo_ba10_ape_mm": 6.216,
+      "historical_imu_ba0_ape_mm": 8.238,
+      "historical_imu_ba10_ape_mm": 6.485,
+      "pilot_assets": {
+        "euroc_run": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0004_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync",
+        "control_trajectory": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0004_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/f_episode_20260618_0004_stereo_right_stereo-inertial.txt",
+        "control_log": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0004_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/orbslam3_native.log",
+        "settings": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0004_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/orbslam3_stereo_right_stereo-inertial.yaml"
+      }
+    },
+    {
+      "key": "main/0007",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0007",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_7.json",
+      "fixed_offset_sec": -0.238744090424,
+      "historical_stereo_ba10_ape_mm": 7.332,
+      "historical_imu_ba0_ape_mm": 6.820,
+      "historical_imu_ba10_ape_mm": 8.087
+    },
+    {
+      "key": "main/0009",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0009",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_9.json",
+      "fixed_offset_sec": -0.002324090423583983,
+      "historical_stereo_ba10_ape_mm": 7.377,
+      "historical_imu_ba0_ape_mm": 4.391,
+      "historical_imu_ba10_ape_mm": 4.348
+    },
+    {
+      "key": "main/0011",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0011",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_11.json",
+      "fixed_offset_sec": -0.030204090424,
+      "historical_stereo_ba10_ape_mm": 15.107,
+      "historical_imu_ba0_ape_mm": 4.448,
+      "historical_imu_ba10_ape_mm": 4.584
+    },
+    {
+      "key": "main/0018",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0018",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_18.json",
+      "fixed_offset_sec": 0.01218,
+      "historical_stereo_ba10_ape_mm": 8.617,
+      "historical_imu_ba0_ape_mm": 7.932,
+      "historical_imu_ba10_ape_mm": 6.622
+    },
+    {
+      "key": "main/0020",
+      "group": "normal",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0020",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_20.json",
+      "fixed_offset_sec": 0.0155,
+      "historical_stereo_ba10_ape_mm": 5.329,
+      "historical_imu_ba0_ape_mm": 7.659,
+      "historical_imu_ba10_ape_mm": 6.493
+    },
+    {
+      "key": "main/0006",
+      "group": "imu_degraded",
+      "episode_dir": "data/evaluation/workbench/rm75_22_final_robust_20260722/main_0006_historical_calib_ba10/run",
+      "ground_truth": "data/evaluation/workbench/rm75_22_final_robust_20260722/supplemental_0006/recovered_gt/rm75_pose_traj_3_from_ref_tcp.json",
+      "fixed_offset_sec": -0.233744090424,
+      "historical_stereo_ba10_ape_mm": 48.466,
+      "historical_imu_ba0_ape_mm": 283.554,
+      "historical_imu_ba10_ape_mm": 46.519,
+      "input_status": "preserved_euroc_only",
+      "preserved_euroc_run": "data/evaluation/workbench/rm75_22_final_robust_20260722/main_0006_historical_calib_ba10/run",
+      "provenance_note": "The original episode symlink target is unavailable. BA10 historical provenance is preserved EuRoC input, historical calibration, and recovered GT; do not silently substitute another episode."
+    },
+    {
+      "key": "main/0008",
+      "group": "imu_degraded",
+      "episode_dir": "data/gripper/gripper_all_seq/episode_gripper_0008",
+      "ground_truth": "data/gripper/gripper_all_seq/rm75_pose_traj_8.json",
+      "fixed_offset_sec": -0.267884090424,
+      "historical_stereo_ba10_ape_mm": 11.554,
+      "historical_imu_ba0_ape_mm": 575.008,
+      "historical_imu_ba10_ape_mm": 681.155,
+      "pilot_assets": {
+        "euroc_run": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0008_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync",
+        "control_trajectory": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0008_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/f_episode_20260623_0005_stereo_right_stereo-inertial.txt",
+        "control_log": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0008_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/orbslam3_native.log",
+        "settings": "data/evaluation/workbench/rm75_stereo_imu_shadow_gate_full_20260721/orbslam3_batch_runs_20260721_213748/episode_gripper_0008_stereo_right_stereo-inertial_low-texture_fastinit0_smooth_strictsync/orbslam3_stereo_right_stereo-inertial.yaml"
+      }
+    },
+    {
+      "key": "0708_xht/0009",
+      "group": "imu_degraded",
+      "episode_dir": "data/0708_xht_mcap/episode_20260708_0009",
+      "ground_truth": "data/0708_xht_mcap/rm75_pose_traj09.json",
+      "fixed_offset_sec": 0.02,
+      "historical_stereo_ba10_ape_mm": 14.712,
+      "historical_imu_ba0_ape_mm": 233.759,
+      "historical_imu_ba10_ape_mm": 64.121,
+      "pilot_assets": {
+        "euroc_run": "data/evaluation/workbench/rm75_0708_historical_calib_20260723/0708_xht_mcap/ba0/episode_20260708_0009/run",
+        "control_trajectory": "data/evaluation/workbench/rm75_0708_historical_calib_20260723/0708_xht_mcap/ba0/episode_20260708_0009/run/f_inertial_ba0.txt",
+        "control_log": "data/evaluation/workbench/rm75_0708_historical_calib_20260723/0708_xht_mcap/ba0/episode_20260708_0009/run/orbslam3_native.log",
+        "settings": "data/evaluation/workbench/rm75_0708_historical_calib_20260723/0708_xht_mcap/ba0/episode_20260708_0009/run/orbslam3_stereo_right_stereo-inertial.yaml"
+      }
+    },
+    {
+      "key": "0708/0001",
+      "group": "cross_family",
+      "episode_dir": "data/0708/episode_20260708_0001",
+      "ground_truth": "data/0708/rm75_pose_traj01.json",
+      "fixed_offset_sec": 0.02,
+      "historical_stereo_ba10_ape_mm": 3.646,
+      "historical_imu_ba0_ape_mm": 3.454,
+      "historical_imu_ba10_ape_mm": 3.490
+    },
+    {
+      "key": "0708_2/0004",
+      "group": "cross_family",
+      "episode_dir": "data/0708_2/episode_20260708_0004",
+      "ground_truth": "data/0708_2/rm75_pose_traj04.json",
+      "fixed_offset_sec": 0.01,
+      "historical_stereo_ba10_ape_mm": 10.394,
+      "historical_imu_ba0_ape_mm": 8.235,
+      "historical_imu_ba10_ape_mm": 7.471
+    },
+    {
+      "key": "0708_xht/0008",
+      "group": "cross_family",
+      "episode_dir": "data/0708_xht_mcap/episode_20260708_0008",
+      "ground_truth": "data/0708_xht_mcap/rm75_pose_traj08.json",
+      "fixed_offset_sec": 0.02,
+      "historical_stereo_ba10_ape_mm": 14.618,
+      "historical_imu_ba0_ape_mm": 8.990,
+      "historical_imu_ba10_ape_mm": 7.655
+    }
+  ]
+}
