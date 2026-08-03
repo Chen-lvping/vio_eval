@@ -1,16 +1,25 @@
 # vio_eval
 
-An evaluation workspace for visual-inertial odometry (VIO), stereo SLAM, hand-eye calibration, and RM75 robot TCP trajectory accuracy. It turns synchronized stereo/IMU recordings and robot poses into an auditable trajectory comparison: calibrated coordinate conversion, time association, rigid SE(3) alignment, APE/RPE metrics, and visual evidence.
+> Stereo SLAM and VIO evaluation for calibrated robot TCP trajectories.
 
-![Synchronized stereo camera, robot TCP ground truth, ORB result, and translation error for a final RM75 evaluation episode.](docs/assets/rm75_episode_03.png)
+<p align="center">
+  <img src="docs/assets/vio_eval_hero.png" alt="VIO evaluation dashboard showing synchronized stereo evidence, TCP trajectories, and calibrated metrics" width="100%">
+</p>
 
-## What Is Included
+<p align="center">
+  <a href="#verified-rm75-result">Results</a> ·
+  <a href="#video-demos">Video demos</a> ·
+  <a href="#core-workflow">Workflow</a> ·
+  <a href="#quick-start">Quick start</a>
+</p>
 
-- **RM75 TCP evaluation**: exports camera trajectories, applies the calibrated camera/IMU-to-TCP transform, and evaluates translation and rotation errors against robot ground truth.
-- **ORB-SLAM3 baselines**: reproducible offline stereo and stereo-inertial runners, including the preserved RM75 reference baseline.
-- **Time and calibration tooling**: PTP checks, AprilGrid hand-eye calibration, timestamp alignment, trajectory normalization, and ground-truth smoothing.
-- **Evidence generation**: trajectory overlays, per-episode viewers, accuracy reports, and synchronized camera/trajectory portfolios.
-- **SXR tracking experiments**: CSV-based stereo tracking runners for Basalt, ORB-SLAM3, OpenVINS, and VINS-Fusion.
+`vio_eval` turns synchronized stereo/IMU recordings and robot poses into an auditable trajectory comparison: calibrated coordinate conversion, timestamp association, rigid SE(3) alignment, APE/RPE metrics, and visual evidence.
+
+| Best demonstrated APE RMSE | Portfolio size | Evaluation frame | Evidence |
+| ---: | ---: | --- | --- |
+| **3.849 mm** | **8** synchronized episodes | Robot TCP + SE(3), `scale=1` | Stereo frames · trajectories · error trace |
+
+**Included capabilities**: RM75 TCP evaluation · ORB-SLAM3 stereo and stereo-inertial runners · AprilGrid hand-eye calibration · PTP/time-alignment tools · standalone viewers/reports · SXR tracking experiments.
 
 Raw recordings, generated trajectories, third-party source trees, build outputs, and local delivery bundles are deliberately excluded from Git. Only the two short curated demos below are versioned. See [data/DATA_LAYOUT.md](data/DATA_LAYOUT.md) for the expected local layout.
 
@@ -33,7 +42,7 @@ The source record for the table, including camera timestamp matching evidence, i
 
 ![ORB feature tracking and aligned RM75 TCP trajectory from the focus showcase.](docs/assets/rm75_focus_episode_20260618_0004.png)
 
-### Video Demos
+## Video Demos
 
 - [Episode 03 — 3.849 mm APE RMSE](docs/assets/rm75_episode_03.mp4): synchronized stereo images, TCP ground truth and ORB trajectory, with per-frame translation error.
 - [Episode 08 — 8.879 mm APE RMSE](docs/assets/rm75_episode_08.mp4): a longer, high-coverage trajectory that demonstrates the same synchronized evaluation layout.
@@ -44,18 +53,18 @@ The rendered videos are visual evidence only; the authoritative numeric records 
 
 ```text
 Stereo / IMU recording + RM75 pose log
-              |
-              v
-      episode export and calibration
-              |
-              v
-    ORB-SLAM3 trajectory generation
-              |
-              v
-  timestamp association and strict sync
-              |
-              v
-camera/IMU -> TCP conversion -> SE(3) evaluation -> viewer/report
+              │
+              ▼
+    Calibrated episode export
+              │
+              ▼
+ ORB-SLAM3 trajectory generation
+              │
+              ▼
+ Timestamp association / strict sync
+              │
+              ▼
+Camera / IMU → TCP → SE(3) → metrics + viewer
 ```
 
 ## Quick Start
