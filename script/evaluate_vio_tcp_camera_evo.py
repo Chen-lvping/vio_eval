@@ -31,6 +31,7 @@ import csv
 import json
 import math
 import runpy
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -256,10 +257,19 @@ def match_ground_truth(
     for idx, t in enumerate(est_times):
         while left + 1 < gt_times.size and gt_times[left + 1] <= t:
             left += 1
-        if left + 1 >= gt_times.size or t < gt_times[left]:
+        if t < gt_times[left]:
+            continue
+        if left + 1 >= gt_times.size:
+            if abs(t - gt_times[left]) > max_gap_s:
+                continue
+            out_times.append(float(t))
+            out_gt_pos.append(gt_pos[left])
+            out_gt_rot.append(gt_rot[left])
+            out_est_pos.append(est_pos[idx])
+            out_est_rot.append(est_rot[idx])
             continue
         t0, t1 = gt_times[left], gt_times[left + 1]
-        if max(abs(t - t0), abs(t1 - t)) > max_gap_s:
+        if min(abs(t - t0), abs(t1 - t)) > max_gap_s:
             continue
         alpha = 0.0 if abs(t1 - t0) <= 1e-12 else float((t - t0) / (t1 - t0))
         out_times.append(float(t))
@@ -380,6 +390,34 @@ def compute_internal_se3_metrics(gt_pos, gt_rot, est_pos, est_rot, times, helper
     }
 
 
+def internal_metric_rows(internal: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
+    """Expose built-in SE(3) metrics using the same units as evo output."""
+
+    def scaled(metrics: Dict[str, float], factor: float) -> Dict[str, float]:
+        return {key: float(value) * factor for key, value in metrics.items()}
+
+    return {
+        "ape_translation_se3": scaled(internal["translation_m"], 1000.0),
+        "ape_rotation_se3": dict(internal["rotation_deg"]),
+        "rpe_translation_5cm": scaled(internal["rpe_translation_m"], 1000.0),
+        "rpe_rotation_5cm": dict(internal["rpe_rotation_deg"]),
+    }
+
+
+def resolve_evo_commands() -> Tuple[Optional[str], Optional[str]]:
+    """Return usable evo executables, supporting both PATH and legacy installs."""
+
+    evo_ape = shutil.which("evo_ape")
+    evo_rpe = shutil.which("evo_rpe")
+    if evo_ape and evo_rpe:
+        return evo_ape, evo_rpe
+    legacy_ape = Path.home() / ".local/bin/evo_ape"
+    legacy_rpe = Path.home() / ".local/bin/evo_rpe"
+    if legacy_ape.is_file() and legacy_rpe.is_file():
+        return str(legacy_ape), str(legacy_rpe)
+    return None, None
+
+
 def default_time_offset_guess(gt_times: np.ndarray, est_times: np.ndarray) -> float:
     if gt_times.size == 0 or est_times.size == 0:
         return 0.0
@@ -488,6 +526,12 @@ def main() -> int:
     )
     parser.add_argument("--time-offset-auto-min-samples", type=int, default=50, help="Minimum associated samples required for a scan candidate")
     parser.add_argument("--rpe-distance-m", type=float, default=0.05)
+    parser.add_argument(
+        "--metrics-backend",
+        choices=["auto", "evo", "internal"],
+        default="auto",
+        help="auto uses evo when installed and otherwise uses the built-in SE(3) metrics; internal needs only NumPy.",
+    )
     args = parser.parse_args()
 
     estimate_path = args.estimate.expanduser().resolve()
@@ -583,8 +627,12 @@ def main() -> int:
     write_tum(gt_matched_tum, times, gt_pos, gt_rot, helpers)
     write_tum(est_matched_tum, times, est_pos, est_rot, helpers)
 
-    evo_ape = str(Path.home() / ".local/bin/evo_ape")
-    evo_rpe = str(Path.home() / ".local/bin/evo_rpe")
+    internal = compute_internal_se3_metrics(gt_pos, gt_rot, est_pos, est_rot, times, helpers)
+    evo_ape, evo_rpe = resolve_evo_commands()
+    use_evo = args.metrics_backend != "internal" and evo_ape is not None and evo_rpe is not None
+    if args.metrics_backend == "evo" and not use_evo:
+        raise RuntimeError("evo is required for --metrics-backend evo; install it with `python3 -m pip install evo`.")
+    metrics_backend = "evo" if use_evo else "internal"
     common = ["tum", str(gt_tum), str(est_tum), "--no_warnings", "-a"]
     if args.time_association == "evo":
         common.extend(["--t_offset", str(args.time_offset_sec), "--t_max_diff", str(args.t_max_diff_sec)])
@@ -639,18 +687,22 @@ def main() -> int:
 
     outputs: Dict[str, str] = {}
     command_texts: Dict[str, str] = {}
-    for name, command in commands:
-        command_texts[name] = evo_command_text(command)
-        try:
-            outputs[name] = run_cmd(command, log_dir / f"{name}.log")
-        except RuntimeError:
-            if name.startswith("rpe_"):
-                print(f"[WARNING] RPE skipped ({name})", flush=True)
-                outputs[name] = "[skipped]"
-                continue
-            raise
+    if use_evo:
+        for name, command in commands:
+            command_texts[name] = evo_command_text(command)
+            try:
+                outputs[name] = run_cmd(command, log_dir / f"{name}.log")
+            except RuntimeError:
+                if name.startswith("rpe_"):
+                    print(f"[WARNING] RPE skipped ({name})", flush=True)
+                    outputs[name] = "[skipped]"
+                    continue
+                raise
+        metrics = {name: parse_evo_stdout(text) for name, text in outputs.items()}
+    else:
+        metrics = internal_metric_rows(internal)
+        print("[INFO] evo not used; reporting built-in rigid SE(3) metrics", flush=True)
 
-    internal = compute_internal_se3_metrics(gt_pos, gt_rot, est_pos, est_rot, times, helpers)
     payload = {
         "estimate": str(estimate_path),
         "ground_truth": str(gt_path),
@@ -660,6 +712,8 @@ def main() -> int:
         "matched_estimate_tum": str(est_matched_tum),
         "matched_samples": associated_sample_count,
         "matched_duration_s": associated_duration_s,
+        "metrics_backend": metrics_backend,
+        "metrics": metrics,
         "evo": {name: parse_evo_stdout(text) for name, text in outputs.items()},
         "evo_commands": command_texts,
         "internal_se3": internal,
@@ -695,7 +749,7 @@ def main() -> int:
 
     with (output_dir / "summary.csv").open("w", encoding="utf-8") as handle:
         handle.write("metric,rmse,mean,median,min,max,std,unit\n")
-        for name, stats in payload["evo"].items():
+        for name, stats in payload["metrics"].items():
             unit = "mm" if "translation" in name else "deg"
             handle.write(
                 f"{name},{stats.get('rmse', float('nan')):.6f},{stats.get('mean', float('nan')):.6f},"
@@ -755,7 +809,10 @@ def main() -> int:
         handle.write("```\n\n")
         handle.write("The robot TCP trajectory is already:\n\n")
         handle.write("```text\nT_base_tcp\n```\n\n")
-        handle.write("evo `--align` estimates the rigid transform from VINS world to robot base, then computes the TCP trajectory error in one common frame.\n\n")
+        handle.write(
+            "The built-in evaluator estimates the rigid transform from VINS world to robot base, then computes the TCP trajectory error in one common frame. "
+            "When available, evo is used to generate the primary metric files.\n\n"
+        )
         handle.write("## Time Association\n\n")
         if args.time_association == "interpolate":
             handle.write("The robot trajectory is interpolated to the VIO timestamps before exporting the TUM files.\n")
@@ -786,7 +843,7 @@ def main() -> int:
         handle.write("## Results\n\n")
         handle.write("| metric | RMSE | mean | median | min | max | std | unit |\n")
         handle.write("|---|---:|---:|---:|---:|---:|---:|---|\n")
-        for name, stats in payload["evo"].items():
+        for name, stats in payload["metrics"].items():
             unit = "mm" if "translation" in name else "deg"
             handle.write(
                 f"| {name} | {stats.get('rmse', float('nan')):.3f} | {stats.get('mean', float('nan')):.3f} | "

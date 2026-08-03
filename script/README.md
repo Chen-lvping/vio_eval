@@ -5,6 +5,17 @@
 - 根目录保留最常用的主入口
 - 子目录收纳诊断、实验、扫描、可视化和后处理工具
 
+## Delivery Entry Point
+
+For final delivery, start with `vio_eval.py`, not the historical runners:
+
+```bash
+python3 script/vio_eval.py demo --output-dir local/minimal_reproduction
+python3 script/vio_eval.py evaluate --help
+```
+
+It evaluates one exported trajectory against RM75 TCP ground truth and keeps the evaluation contract independent from machine-local ORB-SLAM3 builds. See `docs/DELIVERY_SOP.md` for acceptance and handoff steps. The remaining scripts are retained as integration, acquisition, diagnostics, or research tools.
+
 ## Root Entrypoints
 
 - `check_time_sync.py`

@@ -1,0 +1,5 @@
+numpy>=1.23
+PyYAML>=6.0
+
+# Optional: enables evo-compatible archives and extended metrics.
+# evo>=1.27

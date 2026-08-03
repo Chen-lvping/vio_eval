@@ -7,10 +7,11 @@
 </p>
 
 <p align="center">
+  <a href="#minimal-reproduction">Minimal reproduction</a> ·
   <a href="#verified-rm75-result">Results</a> ·
-  <a href="#video-demos">Video demos</a> ·
   <a href="#core-workflow">Workflow</a> ·
-  <a href="#quick-start">Quick start</a>
+  <a href="#reproducible-adaptive-vio">Algorithm</a> ·
+  <a href="docs/DELIVERY_SOP.md">Delivery SOP</a>
 </p>
 
 `vio_eval` turns synchronized stereo/IMU recordings and robot poses into an auditable trajectory comparison: calibrated coordinate conversion, timestamp association, rigid SE(3) alignment, APE/RPE metrics, and visual evidence.
@@ -67,11 +68,50 @@ Stereo / IMU recording + RM75 pose log
 Camera / IMU → TCP → SE(3) → metrics + viewer
 ```
 
-## Quick Start
+## Minimal Reproduction
 
-The project is a workstation-oriented research workspace. It expects a local ORB-SLAM3 build, the calibration files, and a local dataset matching the data layout; no dataset is committed to this repository.
+The supported delivery core is a dependency-light TCP trajectory evaluator. It includes a small synthetic fixture, so a fresh checkout can prove the coordinate chain and SE(3) metric contract without robot hardware, ORB-SLAM3, or proprietary recordings:
 
-Verify a batch configuration without running SLAM:
+```bash
+python3 -m pip install -r requirements-minimal.txt
+python3 script/vio_eval.py demo --output-dir local/minimal_reproduction
+python3 -m unittest discover -s tests -v
+```
+
+For a real exported camera pose CSV and robot TCP JSON:
+
+```bash
+python3 script/vio_eval.py evaluate \
+  --estimate /data/episode/pose_camera.csv \
+  --ground-truth /data/ground_truth/episode.json \
+  --estimate-frame camera \
+  --output-dir local/customer_episode
+```
+
+See [docs/DELIVERY_SOP.md](docs/DELIVERY_SOP.md) for acceptance criteria, IMU input, output review, and handoff requirements.
+
+## Reproducible Adaptive VIO
+
+The RM75 adaptive stereo-inertial algorithm is included as a small patch over a
+pinned public ORB-SLAM3 commit—not as an opaque, machine-local source tree. It
+corrects the configured IMU period, adds deterministic offline Local Mapping
+synchronization, and provides an opt-in low-excitation initialization gate:
+
+```bash
+script/setup_orbslam3_adaptive_vio.sh \
+  --orb-root /opt/ORB_SLAM3_adaptive_vio --build
+```
+
+The patch checksum, exact upstream revision, operating parameters, one-episode
+command, and fixed-offset ablation procedure are documented in
+[docs/ALGORITHM_REPRODUCTION.md](docs/ALGORITHM_REPRODUCTION.md). This algorithm
+does not select its behavior from RM75 ground truth or post-hoc timing scans.
+
+## Optional ORB-SLAM3 Workflow
+
+The project remains a workstation-oriented research workspace for trajectory generation. A local ORB-SLAM3 build, calibration files, and a local dataset matching the data layout are required; no raw dataset is committed to this repository.
+
+Verify a preserved batch configuration without running SLAM:
 
 ```bash
 python3 script/run_orbslam3_rm75_best_batch.py \
@@ -79,15 +119,6 @@ python3 script/run_orbslam3_rm75_best_batch.py \
   --gt-root data/ground_truth/rm75_6_24 \
   --episode-pattern 'episode_20260624_*' \
   --verify-only
-```
-
-Run the preserved RM75 stereo reference baseline:
-
-```bash
-python3 script/run_orbslam3_rm75_best_batch.py \
-  --episode-root data/gripper/gripper_data_6_24 \
-  --gt-root data/ground_truth/rm75_6_24 \
-  --episode-pattern 'episode_20260624_*'
 ```
 
 Run one stereo-inertial episode and produce its TCP evaluation:
@@ -110,7 +141,13 @@ Use `--help` on each entry point to adapt local ORB paths, timing offsets, and o
 | --- | --- |
 | `script/run_orbslam3_rm75_best_batch.py` | Preserved RM75 stereo reference batch runner |
 | `script/run_orbslam3_tcp_eval.py` | Single episode ORB-SLAM3 export and TCP evaluation |
-| `script/evaluate_vio_tcp_camera_evo.py` | Core calibrated trajectory evaluator |
+| `script/vio_eval.py` | Stable delivery CLI: demo and one-episode evaluation |
+| `algorithms/orbslam3_adaptive_vio/` | Pinned upstream metadata for the adaptive VIO implementation |
+| `script/setup_orbslam3_adaptive_vio.sh` | Safe clone, patch verification, and optional build entry point |
+| `script/run_adaptive_imu_init_ablation.py` | Deterministic adaptive-gate ablation runner |
+| `script/evaluate_vio_tcp_camera_evo.py` | Core calibrated trajectory evaluator used by the delivery CLI |
+| `examples/minimal_reproduction/` | Versioned synthetic input for clean-machine verification |
+| `docs/DELIVERY_SOP.md` | Delivery, acceptance, and handoff procedure |
 | `script/visualize/` | Trajectory viewers, reports, and portfolio builders |
 | `script/capture/` | Camera/robot acquisition and hardware checks |
 | `script/experiments/` | Reproducible ablations and parameter sweeps |

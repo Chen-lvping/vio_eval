@@ -1,0 +1,9 @@
+{
+  "samples": [
+    {"timestamp": 0.0, "position_m": [0.000, 0.000, 0.000], "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0]},
+    {"timestamp": 0.1, "position_m": [0.100, 0.000, 0.000], "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0]},
+    {"timestamp": 0.2, "position_m": [0.200, 0.000, 0.000], "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0]},
+    {"timestamp": 0.3, "position_m": [0.300, 0.000, 0.000], "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0]},
+    {"timestamp": 0.4, "position_m": [0.400, 0.000, 0.000], "quaternion_xyzw": [0.0, 0.0, 0.0, 1.0]}
+  ]
+}

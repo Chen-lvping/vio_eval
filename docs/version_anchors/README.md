@@ -9,6 +9,9 @@ exist as a base git commit plus local uncommitted deltas.
   Human-readable note for the current best-known RM75 ORB-SLAM3 baseline.
 - `patches/*.patch`
   Exact code delta snapshots used to recreate the anchored working tree.
+- `../ALGORITHM_REPRODUCTION.md`
+  Reproducible adaptive stereo-inertial implementation with a public upstream
+  revision, a checked patch, and an ablation procedure.
 
 ## Restore
 

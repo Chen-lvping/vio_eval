@@ -1,0 +1,4 @@
+repository=https://github.com/UZ-SLAMLab/ORB_SLAM3.git
+commit=4452a3c4ab75b1cde34e5505a36ec3f9edcdc4c4
+patch=docs/version_anchors/patches/orbslam3_adaptive_vio_20260803.patch
+patch_sha256=7833a42bdeda3743e4fc89f1543aed37e5d6907626f42529aff96f694048d0e8
